@@ -186,6 +186,7 @@ struct camera_common_data {
 	int	sensor_mode_id;
 	bool	use_sensor_mode_id;
 	bool	override_enable;
+	int	powercount;
 };
 
 struct camera_common_focuser_data;
