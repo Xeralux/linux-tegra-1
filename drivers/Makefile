@@ -186,3 +186,4 @@ endif
 ifneq ($(wildcard $(srctree)/nvidia/t19x/drivers/Makefile.*),)
 obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += ../nvidia/t19x/drivers/
 endif
+obj-y += altera-pci/
