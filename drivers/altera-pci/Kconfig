@@ -1,0 +1,8 @@
+config PCI_ALTERA_EUTECUS
+    tristate "PCI driver for Eutecus V4l2 FPGA device"
+    depends on PCI
+    select VIDEOBUF2_DMA_CONTIG
+    help
+        This is a fast V4l2 channel between Jetson and FPGA.
+        The module name is 'eutecus-pci'.
+
