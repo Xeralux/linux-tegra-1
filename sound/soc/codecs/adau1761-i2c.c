@@ -35,6 +35,15 @@ static int adau1761_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct of_device_id adau1761_of_match[] = {
+	{ .compatible = "ad,adau1361", },
+	{ .compatible = "ad,adau1461", },
+	{ .compatible = "ad,adau1761", },
+	{ .compatible = "ad,adau1961", },
+	{ }
+};
+
+MODULE_DEVICE_TABLE(of, adau1761_of_match);
 static const struct i2c_device_id adau1761_i2c_ids[] = {
 	{ "adau1361", ADAU1361 },
 	{ "adau1461", ADAU1761 },
@@ -47,6 +56,8 @@ MODULE_DEVICE_TABLE(i2c, adau1761_i2c_ids);
 static struct i2c_driver adau1761_i2c_driver = {
 	.driver = {
 		.name = "adau1761",
+		.owner = THIS_MODULE,
+		.of_match_table = adau1761_of_match,
 	},
 	.probe = adau1761_i2c_probe,
 	.remove = adau1761_i2c_remove,
