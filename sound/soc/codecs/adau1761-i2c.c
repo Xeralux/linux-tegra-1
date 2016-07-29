@@ -10,23 +10,44 @@
 #include <linux/i2c.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
 
 #include "adau1761.h"
 
+static const struct of_device_id adau1761_of_match[] = {
+	{ .compatible = "ad,adau1361", .data = (void *)ADAU1361 },
+	{ .compatible = "ad,adau1461", .data = (void *)ADAU1761 },
+	{ .compatible = "ad,adau1761", .data = (void *)ADAU1761 },
+	{ .compatible = "ad,adau1961", .data = (void *)ADAU1361 },
+	{ }
+};
+
+MODULE_DEVICE_TABLE(of, adau1761_of_match);
+
 static int adau1761_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
+	struct device_node *np = client->dev.of_node;
+	enum adau17x1_type type = id->driver_data;
 	struct regmap_config config;
 
+	if (np) {
+		const struct of_device_id *of_id;
+		of_id = of_match_device(adau1761_of_match, &client->dev);
+		if (of_id)
+			type = (enum adau17x1_type) of_id->data;
+	}
 	config = adau1761_regmap_config;
 	config.val_bits = 8;
 	config.reg_bits = 16;
 
+	dev_info(&client->dev, "probing codec type %u\n", type);
+
 	return adau1761_probe(&client->dev,
 		devm_regmap_init_i2c(client, &config),
-		id->driver_data, NULL);
+		type, NULL);
 }
 
 static int adau1761_i2c_remove(struct i2c_client *client)
@@ -35,15 +56,6 @@ static int adau1761_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
-static const struct of_device_id adau1761_of_match[] = {
-	{ .compatible = "ad,adau1361", },
-	{ .compatible = "ad,adau1461", },
-	{ .compatible = "ad,adau1761", },
-	{ .compatible = "ad,adau1961", },
-	{ }
-};
-
-MODULE_DEVICE_TABLE(of, adau1761_of_match);
 static const struct i2c_device_id adau1761_i2c_ids[] = {
 	{ "adau1361", ADAU1361 },
 	{ "adau1461", ADAU1761 },

@@ -764,6 +764,121 @@ static struct snd_soc_dai_driver adau1761_dai_driver = {
 	.ops = &adau17x1_dai_ops,
 };
 
+static const struct {
+	const char *name;
+	enum adau1761_output_mode mode;
+} adau1761_output_mode_table[] = {
+	{ .name = "headphone", .mode = ADAU1761_OUTPUT_MODE_HEADPHONE },
+	{ .name = "headphone-capless", .mode = ADAU1761_OUTPUT_MODE_HEADPHONE_CAPLESS },
+	{ .name = "line", .mode = ADAU1761_OUTPUT_MODE_LINE },
+};
+
+static const struct {
+	const char *name;
+	enum adau1761_digmic_jackdet_pin_mode mode;
+} adau1761_digmic_jackdet_pin_mode_table[] = {
+	{ .name = "none", .mode = ADAU1761_DIGMIC_JACKDET_PIN_MODE_NONE },
+	{ .name = "digmic", .mode = ADAU1761_DIGMIC_JACKDET_PIN_MODE_DIGMIC },
+	{ .name = "jackdet", .mode = ADAU1761_DIGMIC_JACKDET_PIN_MODE_JACKDETECT },
+};
+
+static int adau1761_of_parse(struct device *dev)
+{
+	struct adau1761_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+	const char *strval;
+	u32 u32val;
+	int i, ret;
+
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return -ENOMEM;
+	dev->platform_data = pdata;
+	pdata->input_differential = of_property_read_bool(np, "input-differential");
+	pdata->jackdetect_active_low = of_property_read_bool(np, "jackdetect-active-low");
+	ret = of_property_read_string(np, "lineout-mode", &strval);
+	if (ret) {
+		dev_err(dev, "err %d reading lineout-mode property\n", ret);
+		return ret;
+	}
+	for (i = 0; i < ARRAY_SIZE(adau1761_output_mode_table) &&
+		     strcmp(adau1761_output_mode_table[i].name, strval); i++);
+	if (i >= ARRAY_SIZE(adau1761_output_mode_table)) {
+		dev_err(dev, "invalid value \"%s\" for lineout-mode property\n", strval);
+		return -EINVAL;
+	}
+	pdata->lineout_mode = adau1761_output_mode_table[i].mode;
+	ret = of_property_read_string(np, "headphone-mode", &strval);
+	if (ret) {
+		dev_err(dev, "err %d reading headphone-mode property\n", ret);
+		return ret;
+	}
+	for (i = 0; i < ARRAY_SIZE(adau1761_output_mode_table) &&
+		     strcmp(adau1761_output_mode_table[i].name, strval); i++);
+	if (i >= ARRAY_SIZE(adau1761_output_mode_table)) {
+		dev_err(dev, "invalid value \"%s\" for headphone-mode property\n", strval);
+		return -EINVAL;
+	}
+	pdata->headphone_mode = adau1761_output_mode_table[i].mode;
+	ret = of_property_read_string(np, "digmic-jackdetect-pin-mode", &strval);
+	if (ret) {
+		dev_err(dev, "err %d reading digmic-jackdetect-pin-mode property\n", ret);
+		return ret;
+	}
+	for (i = 0; i < ARRAY_SIZE(adau1761_digmic_jackdet_pin_mode_table) &&
+		     strcmp(adau1761_digmic_jackdet_pin_mode_table[i].name, strval); i++);
+	if (i >= ARRAY_SIZE(adau1761_digmic_jackdet_pin_mode_table)) {
+		dev_err(dev, "invalid value \"%s\" for lineout-mode property\n", strval);
+		return -EINVAL;
+	}
+	pdata->digmic_jackdetect_pin_mode = adau1761_digmic_jackdet_pin_mode_table[i].mode;
+	ret = of_property_read_u32(np, "micbias-voltage-pct", &u32val);
+	if (ret) {
+		dev_err(dev, "err %d reading micbias-voltage-pct property\n", ret);
+		return ret;
+	}
+	switch (u32val) {
+	case 90:
+		pdata->micbias_voltage = ADAU17X1_MICBIAS_0_90_AVDD;
+		break;
+	case 65:
+		pdata->micbias_voltage = ADAU17X1_MICBIAS_0_65_AVDD;
+		break;
+	default:
+		dev_err(dev, "invalid value (%u) for micbias-voltage-pct property\n", u32val);
+		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(np, "jackdetect-debounce-time-msec", &u32val);
+	// Not required unless jack detection mode is set
+	if (ret == -EINVAL &&
+	    pdata->digmic_jackdetect_pin_mode != ADAU1761_DIGMIC_JACKDET_PIN_MODE_JACKDETECT)
+		return 0;
+	if (ret) {
+		dev_err(dev, "err %d reading jackdetect-debounce-time-msec property\n", ret);
+		return ret;
+	}
+	switch (u32val) {
+	case 5:
+		pdata->jackdetect_debounce_time = ADAU1761_JACKDETECT_DEBOUNCE_5MS;
+		break;
+	case 10:
+		pdata->jackdetect_debounce_time = ADAU1761_JACKDETECT_DEBOUNCE_10MS;
+		break;
+	case 20:
+		pdata->jackdetect_debounce_time = ADAU1761_JACKDETECT_DEBOUNCE_20MS;
+		break;
+	case 40:
+		pdata->jackdetect_debounce_time = ADAU1761_JACKDETECT_DEBOUNCE_40MS;
+		break;
+	default:
+		dev_err(dev, "invalid value (%u) for jackdetect-debounce-time-msec property\n", u32val);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int adau1761_probe(struct device *dev, struct regmap *regmap,
 	enum adau17x1_type type, void (*switch_mode)(struct device *dev))
 {
@@ -782,6 +897,14 @@ int adau1761_probe(struct device *dev, struct regmap *regmap,
 	ret = adau17x1_probe(dev, regmap, type, switch_mode, firmware_name);
 	if (ret)
 		return ret;
+
+	if (!dev->platform_data && dev->of_node) {
+		ret = adau1761_of_parse(dev);
+		if (ret) {
+			dev_err(dev, "error parsing device tree properties: %d\n", ret);
+			return ret;
+		}
+	}
 
 	return snd_soc_register_codec(dev, &adau1761_codec_driver, dai_drv, 1);
 }
