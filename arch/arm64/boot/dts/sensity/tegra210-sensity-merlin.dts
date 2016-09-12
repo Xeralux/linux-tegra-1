@@ -1,0 +1,49 @@
+/*
+ * arch/arm64/boot/dts/tegra210-sensity-merlin.dts
+ *
+ * Copyright (c) 2016 Sensity Systems, Inc.  All rights reserved.
+ * Copyright (c) 2017 Verizon Communications, Inc.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#include "tegra210-sensity-merlin-base.dts"
+
+/ {
+	model = "merlin";
+	compatible = "sensity,merlin", "nvidia,jetson-cv", "nvidia,tegra210";
+	nvidia,dtsfilename = __FILE__;
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	chosen {
+		bootloader {
+			nvidia,skip-display-init;
+		};
+	};
+
+	host1x {
+		dc@54200000 {
+			status = "disabled";
+		};
+
+		dc@54240000 {
+			status = "disabled";
+			nvidia,dc-or-node = "/host1x/sor1";
+		};
+
+	};
+
+	backlight {
+		status = "disabled";
+	};
+};
