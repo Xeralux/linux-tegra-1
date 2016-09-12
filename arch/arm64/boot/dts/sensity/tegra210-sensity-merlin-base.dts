@@ -1,0 +1,830 @@
+/*
+ * Copyright (c) 2016, Sensity Systems, Inc.  All rights reserved.
+ * Copyright (c) 2017 Verizon Communications, Inc.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/dts-v1/;
+
+/memreserve/ 0x80000000 0x00020000;
+
+#include "tegra210-jetson-common.dtsi"
+#include <tegra210-soc/tegra210-audio.dtsi>
+#include "tegra210-sensity-merlin-power-tree.dtsi"
+#include "tegra210-sensity-merlin-pinmux.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-prods.dtsi"
+#include "tegra210-sensity-merlin-cameras.dtsi"
+#include <tegra210-soc/tegra210-sdhci.dtsi>
+#include "jetson-platforms/tegra210-p2180-common.dtsi"
+#include <dt-bindings/iio/meter/ina3221x.h>
+#include <t210-common-platforms/tegra210-otg-gpio-detection-extcon.dtsi>
+#include "jetson-platforms/tegra210-jetson-cv-emc-p2180-1000-a00.dtsi"
+#include <tegra210-soc/tegra210-edp.dtsi>
+#include <t210-common-platforms/tegra210-sysedp.dtsi>
+#include <t210-common-platforms/tegra210-thermal-nct72-p2530.dtsi>
+#include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
+#include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
+#include <t210-common-platforms/tegra210-cpufreq.dtsi>
+#include <t210-common-overrides/tegra210-power-dvfs-override-ucm2c.dtsi>
+
+/ {
+	model = "merlin";
+	compatible = "sensity,merlin", "nvidia,jetson-cv", "nvidia,tegra210";
+	nvidia,dtsfilename = __FILE__;
+
+	nvidia,boardids = "2597:2180:A0";
+	nvidia,proc-boardid = "2597:2180:A0";
+	nvidia,pmu-boardid = "2597:2180:A0";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		rtc0 = "/i2c@7000d000/max77620@3c";
+		/delete-property/ rtc1;
+	};
+
+	chosen {
+		board-has-eeprom;
+		stdout-path = &uarta;
+	};
+
+	reserved-memory {
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			size = <0x0 0x20000000>;	/* size set as 512MB here. Update it as desired. */
+			alignment = <0 0x100000>;	/* carveout start is aligned to 1MB here*/
+			alloc-ranges = <0 0 0x1 0>;	/* phys memory reserved is between 0x0 and 4GB-1 address range. */
+			no-map;
+			status = "disabled";
+		};
+	};
+
+	pmc@7000e400 {
+		nvidia,invert-interrupt;
+		iopad-defaults {
+			sdmmc-io-pads {
+				pins = "sdmmc1", "sdmmc3";
+				nvidia,enable-voltage-switching;
+			};
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = < 0x0 0x80000000 0x0 0x80000000 >;
+	};
+
+	rtc {
+		status = "disabled";
+	};
+
+	sdhci@700b0600 { /* SDMMC4 for EMMC */
+		uhs-mask = <0x0>;
+		built-in;
+		power-off-rail;
+		status = "okay";
+		bus-width = <8>;
+		non-removable;
+	};
+
+	sdhci@700b0200 { /* SDMMC2 for Wifi */
+		uhs-mask = <0x8>;
+		power-off-rail;
+		status = "disabled";
+	};
+
+	sdhci@700b0000 { /* SDMMC1 for SD card */
+		status = "disabled";
+	};
+
+	adma@702e2000  {
+		dma-channels = <10>;
+		status = "okay";
+	};
+
+	ahub {
+		i2s@702d1000 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
+			vdd-1v8-audio-hv-supply = <&max77620_sd3>;
+			vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1300 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vddio-dmic";
+			vddio-dmic-supply = <&max77620_sd3>;
+		};
+
+		i2s@702d1100 {
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <>;
+			pinctrl-1 = <>;
+			regulator-supplies = "vdd-1v8-spi-hv", "vdd-1v8-spi-hv-bias";
+			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
+			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
+			fsync-width = <0>;
+		};
+	};
+
+	sata@70020000 {
+		compatible = "nvidia,tegra210-ahci-sata";
+		status = "okay";
+	};
+
+	pcie-controller@1003000 {
+		nvidia,wake-gpio = <&gpio TEGRA_GPIO(A, 2) 0>;
+		dvdd-pex-pll-supply = <&max77620_ldo1>;
+		l0-dvddio-pex-supply = <&max77620_ldo1>;
+		l1-dvddio-pex-supply = <&max77620_ldo1>;
+		l2-dvddio-pex-supply = <&max77620_ldo1>;
+		l3-dvddio-pex-supply = <&max77620_ldo1>;
+		l4-dvddio-pex-supply = <&max77620_ldo1>;
+		l5-dvddio-pex-supply = <&max77620_ldo1>;
+		l6-dvddio-pex-supply = <&max77620_ldo1>;
+		hvdd-pex-pll-e-supply = <&max77620_sd3>;
+		l0-hvddio-pex-supply = <&max77620_sd3>;
+		l1-hvddio-pex-supply = <&max77620_sd3>;
+		l2-hvddio-pex-supply = <&max77620_sd3>;
+		l3-hvddio-pex-supply = <&max77620_sd3>;
+		l4-hvddio-pex-supply = <&max77620_sd3>;
+		l5-hvddio-pex-supply = <&max77620_sd3>;
+		l6-hvddio-pex-supply = <&max77620_sd3>;
+		vddio-pex-ctl-supply = <&max77620_sd3>;
+		status = "okay";
+
+		pci@1,0 {
+			nvidia,num-lanes = <4>;
+			status = "okay";
+		};
+
+		pci@2,0 {
+			nvidia,num-lanes = <1>;
+			status = "disabled";
+		};
+	};
+
+	host1x {
+		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN3>,
+						<&tegra_car TEGRA210_CLK_CILE>,
+						<&tegra_car TEGRA210_CLK_CILCD>,
+						<&tegra_car TEGRA210_CLK_CILAB>,
+						<&tegra_car TEGRA210_CLK_VI_I2C>,
+						<&tegra_car TEGRA210_CLK_CLK_OUT_3_MUX>,
+						<&tegra_car TEGRA210_CLK_VI>,
+						<&tegra_car TEGRA210_CLK_ISP>,
+						<&tegra_car TEGRA210_CLK_ISPB>;
+		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_EXTERN3>,
+						<&tegra_car TEGRA210_CLK_PLL_C>,
+						<&tegra_car TEGRA210_CLK_PLL_C>,
+						<&tegra_car TEGRA210_CLK_ISP>;
+		assigned-clock-rates = <24000000>,
+						<102000000>,
+						<102000000>,
+						<102000000>,
+						<102000000>,
+						<24000000>,
+						<408000000>,
+						<408000000>,
+						<0>;
+		/* tegradc.0 */
+		dc@54200000 {
+			status = "disabled";
+		};
+
+		/* tegradc.1 */
+		dc@54240000 {
+			status = "disabled";
+		};
+
+		dsi {
+			status = "disabled";
+		};
+
+		sor {
+		        status = "disabled";
+		};
+
+		dpaux1 {
+			status = "disabled";
+		};
+
+		i2c@546c0000 {
+			status = "okay";
+			bus-pullup-supply = <&max77620_sd3>;
+			avdd_dsi_csi-supply = <&max77620_ldo0>;
+		};
+
+		vi {
+			status = "okay";
+			avdd_dsi_csi-supply = <&max77620_ldo0>;
+		};
+	};
+
+	serial@70006040 {
+		status = "disabled";
+	};
+
+	serial@70006200 {
+		status = "okay";
+	};
+
+	serial@70006300 {
+		status = "disabled";
+		dma-names = "tx";
+	};
+
+	spi@7000d400 {
+		status = "disabled";
+	};
+
+	spi@7000da00 {
+		status = "okay";
+		spiflash: mcix@0 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "macronix,mx25u25635f", "jedec,spi-nor";
+			reg = <0>;
+			spi-max-frequency = <10000000>;
+			m25p,fast-read;
+			enable-gpio = <&gpio TEGRA_GPIO(H, 7) GPIO_ACTIVE_LOW>;
+			reset-gpios = <&gpio TEGRA_GPIO(V, 6) GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	gpio@6000d000 {
+		adau1361-audio {
+			gpio-hog;
+			function;
+			gpios = <
+				TEGRA_GPIO(B, 0) 0
+				TEGRA_GPIO(B, 1) 0
+				TEGRA_GPIO(B, 2) 0
+				TEGRA_GPIO(B, 3) 0
+				TEGRA_GPIO(BB, 0) 0
+				>;
+			label = "I2S0_LRCLK", "I2S0_SDIN", "I2S0_SDOUT",
+				"I2S0_CLK", "AUDIO_MCLK";
+		};
+	};
+	sound_card: sound {
+		compatible = "nvidia,tegra-audio-t210ref-adau1x61";
+		nvidia,model = "tegra-snd-t210ref-adau1x61";
+
+		clocks = <&tegra_car TEGRA210_CLK_PLL_P_OUT1>,
+                        <&tegra_car TEGRA210_CLK_PLL_A>,
+                        <&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+                        <&tegra_car TEGRA210_CLK_D_AUDIO>,
+                        <&tegra_car TEGRA210_CLK_CLK_M>,
+                        <&tegra_car TEGRA210_CLK_EXTERN1>;
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
+			"clk_m", "extern1";
+
+
+		assigned-clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
+			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA210_CLK_D_AUDIO>,
+			<&tegra_car TEGRA210_CLK_EXTERN1>;
+		assigned-clock-rates = <368640000>, <36864000>,
+			<36864000>, <12288000>;
+
+		nvidia,num-codec-link = <1>;
+
+		nvidia,audio-routing =
+			"x LINN",	"x Microphone";
+
+		nvidia,xbar = <&tegra_axbar>;
+		nvidia,dai-link-1 {
+			link-name = "adau-hifi";
+			cpu-dai = <&tegra_i2s1>;
+			cpu-dai-name = "I2S1";
+			codec-dai = <&adau1361>;
+			codec-dai-name = "adau-hifi";
+			format = "i2s";
+			bitclock-master;
+			frame-master;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "x";
+		};
+	};
+
+	adsp_audio {
+		compr-ops = <1>;
+		num-plugin = <5>;
+		plugin-info-1 {
+			plugin-name = "mp3-dec1";
+			firmware-name = "nvmp3dec.elf";
+			widget-name = "MP3-DEC1";
+		};
+		plugin-info-2 {
+			plugin-name = "spkprot";
+			firmware-name = "nvspkprot.elf";
+			widget-name = "SPKPROT-SW";
+		};
+		plugin-info-3 {
+			plugin-name = "src";
+			firmware-name = "nvsrc.elf";
+			widget-name = "SRC";
+		};
+		plugin-info-4 {
+			plugin-name = "aac-dec1";
+			firmware-name = "nvaacdec.elf";
+			widget-name = "AAC-DEC1";
+		};
+		plugin-info-5 {
+			plugin-name = "aec";
+			firmware-name = "nvoice.elf";
+			widget-name = "AEC";
+		};
+	};
+
+	extcon {
+		extcon@0 {
+			status = "disabled";
+		};
+	};
+
+	udc@7d000000 {
+		nvidia,port-otg;
+		nvidia,charging-supported;
+		#extcon-cells = <1>;
+		status = "disabled";
+	};
+
+        otg@7d000000 {
+		#extcon-cells = <1>;
+		status = "disabled";
+	};
+
+	mailbox@70098000 {
+		status = "okay";
+	};
+
+	usb_cd {
+		status = "okay";
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "otg-phy";
+	};
+
+	watchdog@60005100 {
+		status = "okay";
+	};
+
+	pinctrl@7009f000 {
+		status = "okay";
+		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
+		pinctrl-names = "default";
+		tegra_padctl_uphy_pinmux_default: pinmux {
+			usb2-micro-AB-xusb {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "xusb";
+				nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_OTG_CAP>;
+				nvidia,usb3-port-fake = <2>;
+			};
+			usb2-std-A-port0 {
+				 nvidia,lanes = "otg-2";
+				 nvidia,function = "xusb";
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb3-std-A-port0 {
+				 nvidia,lanes = "uphy-lane-5";
+				 nvidia,function = "usb3";
+				 nvidia,usb3-port = <1>;
+				 nvidia,usb2-map = <2>;
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb2-eth {
+				 nvidia,lanes = "otg-1";
+				 nvidia,function = "xusb";
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb3-eth {
+				 nvidia,lanes = "uphy-lane-6";
+				 nvidia,function = "usb3";
+				 nvidia,usb3-port = <0>;
+				 nvidia,usb2-map = <1>;
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			hsic {
+				 nvidia,lanes = "hsic-0";
+				 nvidia,function = "hsic";
+			};
+			pcie {
+				 nvidia,lanes =	"uphy-lane-1", "uphy-lane-2",
+						"uphy-lane-3", "uphy-lane-4";
+				 nvidia,function = "pcie";
+				 nvidia,pcie-controller = <0>;
+				 nvidia,pcie-lane-select =
+					<TEGRA_PADCTL_PCIE_LANE_X4>;
+			};
+			pcie-m2 {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "pcie";
+				nvidia,pcie-controller = <1>;
+				nvidia,pcie-lane-select =
+					<TEGRA_PADCTL_PCIE_LANE_X1>;
+			};
+			sata {
+				 nvidia,lanes = "uphy-lane-7";
+				 nvidia,function = "sata";
+			};
+		};
+	};
+
+	xusb@70090000 {
+		status = "okay";
+		extcon-cables = <&vbus_gpio_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
+		phys =	<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
+		nvidia,pmc-wakeup =
+			<&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
+			<&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 44 PMC_TRIGGER_TYPE_HIGH>;
+	};
+
+	xudc@700d0000 {
+		nvidia,portmap = <0x0108>;
+		#extcon-cells = <1>;
+		status = "disabled";
+	};
+
+	xotg {
+		#extcon-cells = <1>;
+		status = "disabled";
+	};
+
+	gpu-dvfs-rework {
+		status = "ok";
+	};
+
+	i2c@7000c000 {
+		adau1361: adau1761.0-003b@3b {
+                        compatible = "ad,adau1361";
+                        reg = <0x3b>;
+			lineout-mode = "headphone"; /* "line" | "headphone" | "headphone-capless" */
+			headphone-mode = "headphone-capless"; /* "line" | "headphone" | "headphone-capless" */
+			digmic-jackdetect-pin-mode = "none"; /* "none" | "digmic" | "jackdetect" */
+			micbias-voltage-pct = <90>; /* <90|65> */
+			input-differential;
+			/* jackdetect-active-low; */
+			/* jackdetect-debounce-time = <5|10|20|40>; */
+                };
+	};
+
+	i2c@7000c400 {
+		nvidia,clock-always-on;
+	};
+
+	sysedp {
+		compatible = "nvidia,tegra124-sysedp";
+		nvidia,margin = <0>;
+		nvidia,min_budget = <0>;
+		nvidia,initial_budget = <40000>;
+	};
+
+	sysedp_reactive_capping@1 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		nvidia,threshold_warning = "WARNING - SYSTEM Voltage Droop detected, please refer to the Jetson Power management application note";
+		interrupt-parent = <&soctherm>;
+		interrupts = <1 0x2002>;
+		sysedpc {
+			nvidia,name = "voltmon_oc1";
+		};
+	};
+
+	sysedp_reactive_capping@3 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		nvidia,threshold_warning = "WARNING - Battery Over Current Limit hit, please refer to the Jetson Power management application note";
+		interrupt-parent = <&soctherm>;
+		interrupts = <3 0x2002>;
+		sysedpc {
+			nvidia,name = "batmon_oc3";
+		};
+	};
+
+	sysedp-dynamic-capping {
+		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		nvidia,throttle_depth = <75>;
+		nvidia,cap_method = <1>;
+	};
+
+	cpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <25000>;
+	};
+
+	gpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <25000>;
+	};
+
+	soctherm@0x700E2000 {
+		throttle-cfgs {
+			throttle_oc1: oc1 {
+				nvidia,priority = <50>;
+				nvidia,polarity-active-low = <1>;
+				nvidia,count-threshold = <100>;
+				nvidia,alarm-filter = <5100000>;
+				nvidia,alarm-period = <0>;
+				nvidia,cpu-throt-percent = <75>;
+				nvidia,gpu-throt-level =
+					<TEGRA_SOCTHERM_THROT_LEVEL_MED>;
+			};
+			throttle_oc3: oc3 {
+				nvidia,priority = <40>;
+				nvidia,polarity-active-low = <1>;
+				nvidia,count-threshold = <15>;
+				nvidia,alarm-filter = <5100000>;
+				nvidia,alarm-period = <0>;
+				nvidia,cpu-throt-percent = <0>;
+				nvidia,gpu-throt-level =
+					<TEGRA_SOCTHERM_THROT_LEVEL_NONE>;
+			};
+		};
+	};
+
+	thermal-zones {
+		CPU-therm {
+			thermal-zone-params {
+				governor-name = "step_wise";
+			};
+			trips {
+				cpu_critical {
+					temperature = <102000>;
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				cpu_heavy {
+					temperature = <100500>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				cpu_throttle {
+					temperature = <97000>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&throttle_heavy 1 1>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/CPU-therm/trips/cpu_throttle}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		GPU-therm {
+			thermal-zone-params {
+				governor-name = "step_wise";
+			};
+			trips {
+				gpu_critical {
+					temperature = <102500>;
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				gpu_heavy {
+					temperature = <101000>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				gpu_throttle {
+					temperature = <97500>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&throttle_heavy 1 1>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/GPU-therm/trips/gpu_throttle}>;
+					cdev-type = "gpu-balanced";
+					cooling-device = <&{/bthrot_cdev/gpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		LCPU-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+			trips {
+				lcpu_critical {
+					temperature = <103000>; /* must be same as GPU's critical temp */
+					hysteresis = <0>;
+					type = "critical";
+					writable;
+				};
+				lcpu_heavy {
+					temperature = <101500>;
+					hysteresis = <0>;
+					type = "hot";
+					writable;
+				};
+				lcpu_throttle {
+					temperature = <92000>;
+					hysteresis = <0>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_critical}>;
+					cdev-type = "tegra-shutdown";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map1 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_heavy}>;
+					cdev-type = "tegra-heavy";
+					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+				map2 {
+					trip = <&{/thermal-zones/LCPU-therm/trips/lcpu_throttle}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		PLL-therm {
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+				max_err_temp = <9000>;
+				max_err_gain = <1000>;
+				gain_p = <1000>;
+				gain_d = <0>;
+				up_compensation = <20>;
+				down_compensation = <20>;
+			};
+		};
+
+		Tboard_tegra {
+			status = "okay";
+		};
+		Tdiode_tegra {
+			status = "okay";
+		};
+		AO-therm {
+			status = "okay";
+		};
+	};
+
+	i2c@7000c400 {
+		clock-frequency = <400000>;
+		mma8451@1c {
+			compatible = "fsl,mma8451";
+			reg = <0x1c>;
+		};
+		eeprom@50 {
+			compatible = "atmel,24c512";
+			reg = <0x50>;
+			pagesize = <128>;
+		};
+		pct2075@48 {
+			compatible = "lm75b", "lm75";
+			reg = <0x48>;
+		};
+		ina3221x@40 {
+			status = "enabled";
+			channel@0 {
+				ti,current-critical-limit-ma = <3333>;
+			};
+		};
+	};
+
+	i2c@7000d000 {
+		clock-frequency = <1000000>;
+	};
+
+	dfll-max77621@70110000 {
+		dfll-max77621-integration {
+			i2c-fs-rate = <1000000>;
+		};
+
+		dfll-max77621-board-params {
+			sample-rate = <20000>;
+		};
+	};
+
+	soctherm@0x700E2000 {
+		therm_gpu {
+			enable-hw-pllx-offsetting;
+			pllx-offset-max = <4000>;
+			pllx-offset-min = <2000>;
+		};
+	};
+
+	clock@70110000 {
+		status = "okay";
+		vdd-cpu-supply = <&cpu_ovr_reg>;
+		nvidia,pwm-to-pmic;
+		nvidia,init-uv = <1000000>;
+		nvidia,align-step-uv = <19200>; /* 19.2mv */
+		nvidia,align-offset-uv = <708000>; /* 708mv */
+		nvidia,sample-rate = <25000>;
+		nvidia,droop-ctrl = <0x00000f00>;
+		nvidia,force-mode = <1>;
+		nvidia,cf = <6>;
+		nvidia,ci = <0>;
+		nvidia,cg = <2>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		status-led {
+			gpios = <&gpio TEGRA_GPIO(H, 6) GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
+	};
+
+	bcmdhd_wlan {
+		status = "disabled";
+	};
+
+	bluedroid_pm {
+		status = "disabled";
+	};
+
+};
