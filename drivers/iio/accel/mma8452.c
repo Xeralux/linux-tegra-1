@@ -1,6 +1,7 @@
 /*
  * mma8452.c - Support for following Freescale 3-axis accelerometers:
  *
+ * MMA8451Q (14 bit)
  * MMA8452Q (12 bit)
  * MMA8453Q (10 bit)
  * MMA8652FC (12 bit)
@@ -85,6 +86,7 @@
 #define  MMA8452_INT_FF_MT			BIT(2)
 #define  MMA8452_INT_TRANS			BIT(5)
 
+#define  MMA8451_DEVICE_ID			0x1a
 #define  MMA8452_DEVICE_ID			0x2a
 #define  MMA8453_DEVICE_ID			0x3a
 #define MMA8652_DEVICE_ID			0x4a
@@ -815,6 +817,13 @@ static struct attribute_group mma8452_event_attribute_group = {
 	.num_event_specs = ARRAY_SIZE(mma8452_motion_event), \
 }
 
+static const struct iio_chan_spec mma8451_channels[] = {
+	MMA8452_CHANNEL(X, 0, 14),
+	MMA8452_CHANNEL(Y, 1, 14),
+	MMA8452_CHANNEL(Z, 2, 14),
+	IIO_CHAN_SOFT_TIMESTAMP(3),
+};
+
 static const struct iio_chan_spec mma8452_channels[] = {
 	MMA8452_CHANNEL(X, 0, 12),
 	MMA8452_CHANNEL(Y, 1, 12),
@@ -844,6 +853,7 @@ static const struct iio_chan_spec mma8653_channels[] = {
 };
 
 enum {
+	mma8451,
 	mma8452,
 	mma8453,
 	mma8652,
@@ -851,6 +861,29 @@ enum {
 };
 
 static const struct mma_chip_info mma_chip_info_table[] = {
+	[mma8451] = {
+		.chip_id = MMA8451_DEVICE_ID,
+		.channels = mma8451_channels,
+		.num_channels = ARRAY_SIZE(mma8451_channels),
+		/*
+		 * Hardware has fullscale of -2G, -4G, -8G corresponding to raw value -2048
+		 * for 12 bit or -8192 for 14 bit.
+		 * The userspace interface uses m/s^2 and we declare micro units
+		 * So scale factor is given by:
+		 * 	g * N * 1000000 / 2048 for N = 2, 4, 8 and g=9.80665
+		 */
+		.mma_scales = { {0, 2394}, {0, 4788}, {0, 9577} },
+		.ev_cfg = MMA8452_TRANSIENT_CFG,
+		.ev_cfg_ele = MMA8452_TRANSIENT_CFG_ELE,
+		.ev_cfg_chan_shift = 1,
+		.ev_src = MMA8452_TRANSIENT_SRC,
+		.ev_src_xe = MMA8452_TRANSIENT_SRC_XTRANSE,
+		.ev_src_ye = MMA8452_TRANSIENT_SRC_YTRANSE,
+		.ev_src_ze = MMA8452_TRANSIENT_SRC_ZTRANSE,
+		.ev_ths = MMA8452_TRANSIENT_THS,
+		.ev_ths_mask = MMA8452_TRANSIENT_THS_MASK,
+		.ev_count = MMA8452_TRANSIENT_COUNT,
+	},
 	[mma8452] = {
 		.chip_id = MMA8452_DEVICE_ID,
 		.channels = mma8452_channels,
@@ -1042,6 +1075,7 @@ static int mma8452_reset(struct i2c_client *client)
 }
 
 static const struct of_device_id mma8452_dt_ids[] = {
+	{ .compatible = "fsl,mma8451", .data = &mma_chip_info_table[mma8451] },
 	{ .compatible = "fsl,mma8452", .data = &mma_chip_info_table[mma8452] },
 	{ .compatible = "fsl,mma8453", .data = &mma_chip_info_table[mma8453] },
 	{ .compatible = "fsl,mma8652", .data = &mma_chip_info_table[mma8652] },
@@ -1055,8 +1089,8 @@ static int mma8452_probe(struct i2c_client *client,
 {
 	struct mma8452_data *data;
 	struct iio_dev *indio_dev;
-	int ret;
 	const struct of_device_id *match;
+	int ret;
 
 	match = of_match_device(mma8452_dt_ids, &client->dev);
 	if (!match) {
@@ -1078,6 +1112,7 @@ static int mma8452_probe(struct i2c_client *client,
 		return ret;
 
 	switch (ret) {
+	case MMA8451_DEVICE_ID:
 	case MMA8452_DEVICE_ID:
 	case MMA8453_DEVICE_ID:
 	case MMA8652_DEVICE_ID:
@@ -1102,13 +1137,20 @@ static int mma8452_probe(struct i2c_client *client,
 
 	ret = mma8452_reset(client);
 	if (ret < 0)
-		return ret;
+		goto error_return;
 
 	data->data_cfg = MMA8452_DATA_CFG_FS_2G;
 	ret = i2c_smbus_write_byte_data(client, MMA8452_DATA_CFG,
 					data->data_cfg);
 	if (ret < 0)
-		return ret;
+		goto error_return;
+
+	data->ctrl_reg1 = MMA8452_CTRL_ACTIVE |
+		(MMA8452_CTRL_DR_DEFAULT << MMA8452_CTRL_DR_SHIFT);
+	ret = i2c_smbus_write_byte_data(client, MMA8452_CTRL_REG1,
+					data->ctrl_reg1);
+	if (ret < 0)
+		goto error_return;
 
 	/*
 	 * By default set transient threshold to max to avoid events if
@@ -1117,7 +1159,7 @@ static int mma8452_probe(struct i2c_client *client,
 	ret = i2c_smbus_write_byte_data(client, MMA8452_TRANSIENT_THS,
 					MMA8452_TRANSIENT_THS_MASK);
 	if (ret < 0)
-		return ret;
+		goto error_return;
 
 	if (client->irq) {
 		/*
@@ -1183,6 +1225,8 @@ buffer_cleanup:
 trigger_cleanup:
 	mma8452_trigger_cleanup(indio_dev);
 
+error_return:
+	dev_err(&client->dev, "%s: returning %d\n", __func__, ret);
 	return ret;
 }
 
@@ -1218,6 +1262,7 @@ static SIMPLE_DEV_PM_OPS(mma8452_pm_ops, mma8452_suspend, mma8452_resume);
 #endif
 
 static const struct i2c_device_id mma8452_id[] = {
+	{ "mma8451", mma8452 },
 	{ "mma8452", mma8452 },
 	{ "mma8453", mma8453 },
 	{ "mma8652", mma8652 },
@@ -1225,11 +1270,6 @@ static const struct i2c_device_id mma8452_id[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, mma8452_id);
-
-static const struct of_device_id mma8452_dt_ids[] = {
-	{ .compatible = "fsl,mma8452" },
-	{ }
-};
 
 static struct i2c_driver mma8452_driver = {
 	.driver = {
