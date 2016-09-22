@@ -22,6 +22,7 @@
 
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
+#include <linux/gpio/consumer.h>
 
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
@@ -32,6 +33,8 @@ struct m25p {
 	struct spi_device	*spi;
 	struct spi_nor		spi_nor;
 	u8			command[MAX_CMD_SIZE];
+	struct gpio_desc	*enable_gpio;
+	struct gpio_desc	*reset_gpio;
 };
 
 static int m25p80_read_reg(struct spi_nor *nor, u8 code, u8 *val, int len)
@@ -189,6 +192,18 @@ static int m25p_probe(struct spi_device *spi)
 	if (!flash)
 		return -ENOMEM;
 
+	flash->enable_gpio = devm_gpiod_get_optional(&spi->dev, "enable", GPIOD_ASIS);
+	if (flash->enable_gpio) {
+		gpiod_set_value(flash->enable_gpio, 1);
+		udelay(10);
+	}
+	flash->reset_gpio = devm_gpiod_get_optional(&spi->dev, "reset", GPIOD_ASIS);
+	if (flash->reset_gpio) {
+		gpiod_set_value(flash->reset_gpio, 1);
+		udelay(1000);
+		gpiod_set_value(flash->reset_gpio, 0);
+	}
+
 	nor = &flash->spi_nor;
 
 	/* install the hooks */
@@ -238,9 +253,15 @@ static int m25p_probe(struct spi_device *spi)
 static int m25p_remove(struct spi_device *spi)
 {
 	struct m25p	*flash = spi_get_drvdata(spi);
+	int status;
 
 	/* Clean up MTD stuff. */
-	return mtd_device_unregister(&flash->spi_nor.mtd);
+	status = mtd_device_unregister(&flash->spi_nor.mtd);
+	if (status == 0 && flash->enable_gpio) {
+		dev_info(&spi->dev, "releasing access to device\n");
+		gpiod_set_value(flash->enable_gpio, 0);
+	}
+	return status;
 }
 
 /*
