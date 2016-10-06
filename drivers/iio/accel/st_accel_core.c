@@ -64,6 +64,8 @@
 #define ST_ACCEL_1_FS_AVL_16_GAIN		IIO_G_TO_M_S_2(12000)
 #define ST_ACCEL_1_BDU_ADDR			0x23
 #define ST_ACCEL_1_BDU_MASK			0x80
+#define ST_ACCEL_1_HR_ADDR			0x23
+#define ST_ACCEL_1_HR_MASK			0x08
 #define ST_ACCEL_1_DRDY_IRQ_ADDR		0x22
 #define ST_ACCEL_1_DRDY_IRQ_INT1_MASK		0x10
 #define ST_ACCEL_1_DRDY_IRQ_INT2_MASK		0x08
@@ -232,6 +234,7 @@ static const struct st_sensor_settings st_accel_sensors_settings[] = {
 			[3] = LSM330DL_ACCEL_DEV_NAME,
 			[4] = LSM330DLC_ACCEL_DEV_NAME,
 			[5] = LSM303AGR_ACCEL_DEV_NAME,
+			[6] = LIS2DH_ACCEL_DEV_NAME,
 		},
 		.ch = (struct iio_chan_spec *)st_accel_12bit_channels,
 		.odr = {
@@ -245,7 +248,6 @@ static const struct st_sensor_settings st_accel_sensors_settings[] = {
 				{ 100, ST_ACCEL_1_ODR_AVL_100HZ_VAL, },
 				{ 200, ST_ACCEL_1_ODR_AVL_200HZ_VAL, },
 				{ 400, ST_ACCEL_1_ODR_AVL_400HZ_VAL, },
-				{ 1600, ST_ACCEL_1_ODR_AVL_1600HZ_VAL, },
 			},
 		},
 		.pw = {
@@ -287,13 +289,17 @@ static const struct st_sensor_settings st_accel_sensors_settings[] = {
 			.addr = ST_ACCEL_1_BDU_ADDR,
 			.mask = ST_ACCEL_1_BDU_MASK,
 		},
+		.hr = {
+			.addr = ST_ACCEL_1_HR_ADDR,
+			.mask = ST_ACCEL_1_HR_MASK,
+		},
 		.drdy_irq = {
 			.addr = ST_ACCEL_1_DRDY_IRQ_ADDR,
 			.mask_int1 = ST_ACCEL_1_DRDY_IRQ_INT1_MASK,
 			.mask_int2 = ST_ACCEL_1_DRDY_IRQ_INT2_MASK,
 		},
 		.multi_read_bit = ST_ACCEL_1_MULTIREAD_BIT,
-		.bootime = 2,
+		.bootime = 7,
 	},
 	{
 		.wai = ST_ACCEL_2_WAI_EXP,
