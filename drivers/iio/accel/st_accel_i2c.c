@@ -110,6 +110,7 @@ static int st_accel_i2c_remove(struct i2c_client *client)
 }
 
 static const struct i2c_device_id st_accel_id_table[] = {
+	{ LIS2DH_ACCEL_DEV_NAME },
 	{ LSM303DLH_ACCEL_DEV_NAME },
 	{ LSM303DLHC_ACCEL_DEV_NAME },
 	{ LIS3DH_ACCEL_DEV_NAME },

@@ -115,6 +115,16 @@ struct st_sensor_bdu {
 };
 
 /**
+ * struct st_sensor_hr - ST sensor device hires setting
+ * @addr: address of the register.
+ * @mask: mask to write the hires flag.
+ */
+struct st_sensor_hr {
+	u8 addr;
+	u8 mask;
+};
+
+/**
  * struct st_sensor_data_ready_irq - ST sensor device data-ready interrupt
  * @addr: address of the register.
  * @mask_int1: mask to enable/disable IRQ on INT1 pin.
@@ -189,6 +199,7 @@ struct st_sensor_settings {
 	struct st_sensor_axis enable_axis;
 	struct st_sensor_fullscale fs;
 	struct st_sensor_bdu bdu;
+	struct st_sensor_hr hr;
 	struct st_sensor_data_ready_irq drdy_irq;
 	bool multi_read_bit;
 	unsigned int bootime;

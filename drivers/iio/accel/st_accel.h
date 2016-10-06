@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/iio/common/st_sensors.h>
 
+#define LIS2DH_ACCEL_DEV_NAME		"lis2dh"
 #define LIS3LV02DL_ACCEL_DEV_NAME	"lis3lv02dl_accel"
 #define LSM303DLHC_ACCEL_DEV_NAME	"lsm303dlhc_accel"
 #define LIS3DH_ACCEL_DEV_NAME		"lis3dh"

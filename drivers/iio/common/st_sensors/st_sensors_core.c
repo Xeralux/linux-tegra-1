@@ -336,6 +336,7 @@ int st_sensors_init_sensor(struct iio_dev *indio_dev,
 					struct st_sensors_platform_data *pdata)
 {
 	struct st_sensor_data *sdata = iio_priv(indio_dev);
+	struct st_sensor_settings *ss = sdata->sensor_settings;
 	struct st_sensors_platform_data *of_pdata;
 	int err = 0;
 
@@ -366,11 +367,18 @@ int st_sensors_init_sensor(struct iio_dev *indio_dev,
 	if (err < 0)
 		return err;
 
+	/* set hires mode */
+	if (ss->hr.addr) {
+		err = st_sensors_write_data_with_mask(indio_dev, ss->hr.addr,
+						      ss->hr.mask, true);
+		if (err < 0)
+			return err;
+	}
+
 	/* set BDU */
-	if (sdata->sensor_settings->bdu.addr) {
-		err = st_sensors_write_data_with_mask(indio_dev,
-					sdata->sensor_settings->bdu.addr,
-					sdata->sensor_settings->bdu.mask, true);
+	if (ss->bdu.addr) {
+		err = st_sensors_write_data_with_mask(indio_dev, ss->bdu.addr,
+						      ss->bdu.mask, true);
 		if (err < 0)
 			return err;
 	}
