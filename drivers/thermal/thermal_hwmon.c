@@ -62,7 +62,11 @@ static ssize_t
 name_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct thermal_hwmon_device *hwmon = dev_get_drvdata(dev);
-	return sprintf(buf, "%s\n", hwmon->type);
+	ssize_t n = scnprintf(buf, PAGE_SIZE, "%s\n", hwmon->type);
+	char *cp = buf;
+	while ((cp = strchr(cp, '-')))
+		*cp++ = '_';
+	return n;
 }
 static DEVICE_ATTR(name, 0444, name_show, NULL);
 
