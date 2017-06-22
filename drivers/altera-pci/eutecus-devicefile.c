@@ -351,7 +351,7 @@ static int eutecus_pci_mmap(struct file * fp, struct vm_area_struct * vma)
     const struct eutecus_pci_resources * res = fp->private_data;
 
     ENTER();
-    DEBUG(memory, "phys=%p, start=%p, end=%p, off=%lu, prot=%lu \n", (void*)res->start, (void*)vma->vm_start, (void*)vma->vm_end, vma->vm_pgoff, pgprot_val(vma->vm_page_prot));
+    DEBUG(memory, "phys=%p, start=%p, end=%p, off=%lu, prot=%llu \n", (void*)res->start, (void*)vma->vm_start, (void*)vma->vm_end, vma->vm_pgoff, pgprot_val(vma->vm_page_prot));
 
     rs = eutecus_remap(vma, res->start);
 

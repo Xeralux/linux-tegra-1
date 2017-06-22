@@ -12,7 +12,7 @@
 #define __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_INFO_H_INCLUDED__
 
 #include <media/v4l2-device.h>
-#include <media/videobuf2-core.h>
+#include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/videobuf2-memops.h>
 #include <linux/spinlock_types.h>
@@ -48,7 +48,7 @@ struct videoout_dev
 
 struct videoout_buffer
 {
-    struct vb2_buffer           vb;
+    struct vb2_v4l2_buffer      vb;
     struct list_head            list;
 
     const struct video_data_format * fmt;
@@ -87,7 +87,7 @@ void videoout_dc_init(struct vb2_mem_ops * memops);
 static inline void videoout_buffer_done(struct videoout_buffer * buf, enum vb2_buffer_state state)
 {
     buf->queued = 1;
-    vb2_buffer_done(&buf->vb, state);
+    vb2_buffer_done(&buf->vb.vb2_buf, state);
 }
 
 #endif /* __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_INFO_H_INCLUDED__ */
