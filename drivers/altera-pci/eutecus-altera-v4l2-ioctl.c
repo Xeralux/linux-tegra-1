@@ -19,6 +19,12 @@ static struct video_data_format formats[] = {
         .colorspace = V4L2_COLORSPACE_RAW,
         .n_planes = 1,
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
+        .frame_intervals = {
+            {
+                .numerator = 1,
+                .denominator = 30,
+            },
+        },
     },
     {
         .name = "4:2:2, packed, YUYV",
@@ -27,10 +33,10 @@ static struct video_data_format formats[] = {
         .colorspace = V4L2_COLORSPACE_RAW,
         .n_planes = 1,
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .plane = {
+        .frame_intervals = {
             {
-                .horizontal = 8,
-                .vertical = 8,
+                .numerator = 1,
+                .denominator = 30,
             },
         },
     },
@@ -41,6 +47,12 @@ static struct video_data_format formats[] = {
         .colorspace = V4L2_COLORSPACE_RAW,
         .n_planes = 3,  /* three planes */
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+        .frame_intervals = {
+            {
+                .numerator = 1,
+                .denominator = 30,
+            },
+        },
         .plane = {
             {
                 .horizontal = 8,
@@ -274,13 +286,73 @@ static int videoout_s_output(struct file * file, void * fh, unsigned int i)
 
 static int videoout_enum_frameintervals(struct file * file, void * priv, struct v4l2_frmivalenum * fval)
 {
+    struct videoout_dev * dev = video_drvdata(file);
+    struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
+    struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
+    struct frame_interval * fi;
+
     ENTER();
 
-    DEBUG(generic, "---------------------------------------------- %p\n", fval);
+    /* We have only one choice: */
+    if (fval->index >= MAX_FRAME_INTERVALS) {
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
 
-    LEAVE_V("%d", 0);
+    if (!dev->fmt) {
+        ERROR("format is not detected properly.\n");
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
+
+    fi = &dev->fmt->frame_intervals[fval->index];
+
+    if (!fi->numerator || !fi->denominator) {
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
+
+    fval->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+
+    fval->discrete.numerator = fi->numerator;
+    fval->discrete.denominator = fi->denominator;
+
+    LEAVE_V("%d %u/%u FPS", 0, fval->discrete.numerator, fval->discrete.denominator);
     return 0;
 };
+
+static int videoout_s_param(struct file * file, void * fh, struct v4l2_streamparm * par)
+{
+    struct videoout_dev * dev = video_drvdata(file);
+    struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
+    struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
+
+    ENTER();
+
+    if (!dev->fmt) {
+        ERROR("format is not detected properly.\n");
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
+
+    switch (par->type) {
+        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
+            /* accepted */
+        break;
+
+        default:
+            return -EINVAL;
+        break;
+    }
+
+    /* The frame interval time: */
+    buf->stream.numerator = par->parm.output.timeperframe.numerator;
+    buf->stream.denominator = par->parm.output.timeperframe.denominator;
+
+    LEAVE_V("%d %u/%u FPS", 0, buf->stream.numerator, buf->stream.denominator);
+    return 0;
+}
 
 static int videoout_enum_fmt_video_output(struct file * file, void * fh, struct v4l2_fmtdesc * fmt)
 {
@@ -587,6 +659,7 @@ const struct v4l2_ioctl_ops videoout_ioctl_ops = {
     .vidioc_enum_input              =   videoout_enum_input,
     .vidioc_enum_framesizes         =   videoout_enum_framesizes,
     .vidioc_g_std                   =   videoout_g_std,
+    .vidioc_s_parm                  =   videoout_s_param,
 
     .vidioc_enum_output             =   videoout_enum_output,
     .vidioc_g_output                =   videoout_g_output,

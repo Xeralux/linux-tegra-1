@@ -22,6 +22,15 @@ struct plane_info {
     unsigned int vertical;
 };
 
+/* Frame interval time */
+struct frame_interval {
+    unsigned int numerator;
+
+    unsigned int denominator;
+};
+
+#define MAX_FRAME_INTERVALS 4
+
 struct video_data_format {
     /* Descriptive name */
     char name[32];
@@ -32,6 +41,8 @@ struct video_data_format {
     u32 fourcc;
 
     enum v4l2_colorspace colorspace;
+
+    struct frame_interval frame_intervals[MAX_FRAME_INTERVALS];
 
     /* Number of planes.
      * If this is >1, then the member 'plane' is in use (see below). */

@@ -13,7 +13,7 @@
 
 static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct videoout_buffer * vob)
 {
-    struct vb2_buffer * vb = &vob->vb;
+    struct vb2_buffer * vb = &vob->vb.vb2_buf;
     struct eutecus_v4l2_frame * frame = container_of(vb2_plane_vaddr(vb, 0), struct eutecus_v4l2_frame, payload);
     u32 serial = ++buf->next_serial;
 
@@ -25,13 +25,13 @@ static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct vid
         case FRAME_READY:
             {
                 struct eutecus_v4l2_header * h = &frame->header;
-                const struct v4l2_buffer * b = &vob->vb.v4l2_buf;
+                const struct vb2_v4l2_buffer * b = &vob->vb;
                 // Copy some v4l2 information:
                 h->seconds      = b->timestamp.tv_sec;
                 h->microseconds = b->timestamp.tv_usec;
                 h->timecode     = b->timecode;
                 h->sequence     = b->sequence;
-                h->index        = b->index;
+                h->index        = vb->index;
                 h->flags        = b->flags;
                 h->field        = b->field;
             }
@@ -142,8 +142,9 @@ static int queue_setup(struct vb2_queue * vq, const void * parg, unsigned int * 
         }
     }
 
-    buf->stream.numerator = 30;  /* FIXME: I could not find this info in the video out device structures, so it is hardwired. */
-    buf->stream.denominator = 1;
+    /* Set the default frame time (can be overriden later). */
+    buf->stream.numerator = 1;
+    buf->stream.denominator = 30;
 
     if (*nbuffers < MIN_BUFFERS) {
         DEBUG(generic, "nbuffers is increased from %u to %u\n", *nbuffers, MIN_BUFFERS);
@@ -159,7 +160,8 @@ static int queue_setup(struct vb2_queue * vq, const void * parg, unsigned int * 
 static int buffer_prepare(struct vb2_buffer * vb)
 {
     struct videoout_dev * dev = vb2_get_videoout_dev(vb->vb2_queue);
-    struct videoout_buffer * buf = container_of(vb, struct videoout_buffer, vb);
+    struct vb2_v4l2_buffer *v4b = to_vb2_v4l2_buffer(vb);
+    struct videoout_buffer * buf = container_of(v4b, struct videoout_buffer, vb);
     unsigned long size;
 
     ENTER();
@@ -175,7 +177,7 @@ static int buffer_prepare(struct vb2_buffer * vb)
         return -EINVAL;
     }
 
-    vb2_set_plane_payload(&buf->vb, 0, size);
+    vb2_set_plane_payload(vb, 0, size);
 
     buf->fmt = dev->fmt;
 
@@ -187,7 +189,8 @@ static int buffer_prepare(struct vb2_buffer * vb)
 static void buffer_queue(struct vb2_buffer * vb)
 {
     struct videoout_dev * dev = vb2_get_videoout_dev(vb->vb2_queue);
-    struct videoout_buffer * vob = container_of(vb, struct videoout_buffer, vb);
+    struct vb2_v4l2_buffer *v4b = to_vb2_v4l2_buffer(vb);
+    struct videoout_buffer * vob = container_of(v4b, struct videoout_buffer, vb);
 
     ENTER();
     DEBUG(generic, "dev=%p, vb=%p\n", dev, vb);
