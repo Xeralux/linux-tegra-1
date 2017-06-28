@@ -223,6 +223,57 @@ static void tegra_mipi_print(struct tegra_mipi *mipi)
 	pr_reg(DSID_MIPI_CAL_CONFIG_2);
 #undef pr_reg
 }
+
+static void tegra_mipi_print_buf(struct tegra_mipi *mipi, char * buf, int len)
+{
+        int val;
+        unsigned long rate;
+	int len_tmp = 0;
+	int position = 0;
+#define pr_reg(a)                                               \
+        do {                                                    \
+                regmap_read(mipi->regmap, a, &val);             \
+                len_tmp = sprintf(buf + position, "%-30s %#04x %#010x\n",  \
+                        #a, a, val);                            \
+		position+=len_tmp;                                   \
+        } while (0)
+
+        rate = clk_get_rate(mipi->mipi_cal_fixed);
+        dev_dbg(mipi->dev, "Fixed clk %luMHz\n", rate/1000000);
+
+        pr_reg(MIPI_CAL_CTRL);
+        pr_reg(CIL_MIPI_CAL_STATUS);
+        pr_reg(CIL_MIPI_CAL_STATUS_2);
+        pr_reg(CILA_MIPI_CAL_CONFIG);
+        pr_reg(CILB_MIPI_CAL_CONFIG);
+        pr_reg(CILC_MIPI_CAL_CONFIG);
+        pr_reg(CILD_MIPI_CAL_CONFIG);
+        pr_reg(CILE_MIPI_CAL_CONFIG);
+        pr_reg(CILF_MIPI_CAL_CONFIG);
+        pr_reg(DSIA_MIPI_CAL_CONFIG);
+        pr_reg(DSIB_MIPI_CAL_CONFIG);
+        pr_reg(DSIC_MIPI_CAL_CONFIG);
+        pr_reg(DSID_MIPI_CAL_CONFIG);
+        pr_reg(MIPI_BIAS_PAD_CFG0);
+        pr_reg(MIPI_BIAS_PAD_CFG1);
+        pr_reg(MIPI_BIAS_PAD_CFG2);
+        pr_reg(DSIA_MIPI_CAL_CONFIG_2);
+        pr_reg(DSIB_MIPI_CAL_CONFIG_2);
+        pr_reg(DSIC_MIPI_CAL_CONFIG_2);
+        pr_reg(DSID_MIPI_CAL_CONFIG_2);
+#undef pr_reg
+
+}
+
+int tegra_mipi_status(char * buf, int len)
+{
+	if (!mipi)
+		return -ENODEV;
+	dev_dbg(mipi->dev, "%s", __func__);
+	tegra_mipi_print_buf(mipi, buf, len);
+}
+
+EXPORT_SYMBOL(tegra_mipi_status);
 static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 {
 	unsigned long timeout;

@@ -32,6 +32,7 @@
 #include <media/v4l2-mediabus.h>
 #include <media/camera_common.h>
 #include <media/imx274.h>
+#include <linux/proc_fs.h>
 
 #include "camera/camera_gpio.h"
 
@@ -41,14 +42,14 @@
 
 #define IMX274_GAIN_REG_MAX	(1957)
 
-#define IMX274_MIN_GAIN		(0)
-#define IMX274_MAX_GAIN		(40)
+#define IMX274_MIN_GAIN		(1)
+#define IMX274_MAX_GAIN		(178)
 #define IMX274_MAX_FRAME_LENGTH	(0xffff)
 #define IMX274_MIN_EXPOSURE_COARSE	(0x0004)
 #define IMX274_MAX_EXPOSURE_COARSE	(IMX274_MAX_FRAME_LENGTH - IMX274_MAX_COARSE_DIFF)
 #define IMX274_MIN_FRAME_LENGTH		(4550)
 
-#define IMX274_DEFAULT_GAIN		(0x100)
+#define IMX274_DEFAULT_GAIN		(IMX274_MIN_GAIN)
 #define IMX274_DEFAULT_FRAME_LENGTH	(4550)
 #define IMX274_DEFAULT_EXPOSURE_COARSE	(IMX274_DEFAULT_FRAME_LENGTH - IMX274_MAX_COARSE_DIFF)
 
@@ -57,6 +58,9 @@
 #define IMX274_DEFAULT_HEIGHT	2160
 #define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
+extern int tegra_mipi_status(char * buf, int len);
+typedef void (*callback)(void *);
+extern int tegra_isp_register_mfi_cb(callback cb, void *cb_arg);
 
 struct imx274 {
 	struct camera_common_power_rail	power;
@@ -65,6 +69,7 @@ struct imx274 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
+	struct kobject 			*soc_kobj;
 
 	int				reg_offset;
 	u32	frame_length;
@@ -82,6 +87,7 @@ static struct regmap_config imx274_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 	.use_single_rw = true,
 };
+struct imx274 *priv_global[6] = {NULL};
 
 static int imx274_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int imx274_s_ctrl(struct v4l2_ctrl *ctrl);
@@ -110,8 +116,8 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.name = "Exposure",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = 30 * FIXED_POINT_SCALING_FACTOR,
-		.max = (s64)33000LL * (s64)FIXED_POINT_SCALING_FACTOR,
+		.min = 1 * FIXED_POINT_SCALING_FACTOR,
+		.max = (s64)3333000LL * (s64)FIXED_POINT_SCALING_FACTOR,
 		.def = 16 * FIXED_POINT_SCALING_FACTOR,
 		.step = 1,
 	},
@@ -143,7 +149,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
 		.min = 0,
-		.max = (s64)0xFFFFFFFFFFFFFFFF,
+		.max = (s64)0xFF,
 		.def = 0,
 		.step = 1,
 	},
@@ -208,6 +214,13 @@ static int imx274_set_gain(struct imx274 *priv, s64 val);
 static int imx274_set_frame_length(struct imx274 *priv, u32 val);
 static int imx274_set_frame_rate(struct imx274 *priv, s64 val);
 static int imx274_set_exposure(struct imx274 *priv, s64 val);
+
+static unsigned long long frame_count = 0;
+
+void calculate_frames_from_isp(void *ctx)
+{
+	frame_count++;
+}
 
 static inline int imx274_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
@@ -514,7 +527,7 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 	struct v4l2_ext_controls ctrls;
 	struct v4l2_ext_control control[3];
 
-	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
+	dev_dbg(&client->dev, "%s++ enable %d mode = %d \n", __func__, enable, s_data->mode);
 
 	if (!enable)
 		return imx274_write_table(priv,
@@ -571,10 +584,39 @@ static int imx274_g_input_status(struct v4l2_subdev *sd, u32 *status)
 	return 0;
 }
 
+static int
+imx274_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+{
+        struct i2c_client *client = v4l2_get_subdevdata(sd);
+        struct camera_common_data *s_data = to_camera_common_data(client);
+        struct imx274 *priv = (struct imx274 *)s_data->priv;
+
+        if (a == NULL)
+                return -EINVAL;
+
+        if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+                /* only capture is supported */
+                return -EINVAL;
+
+	if(a->parm.raw_data[0] == 1 && s_data->mode == 0)
+	{
+		printk("binning mode\n");
+		imx274_write_table(priv, imx274_mode3_1920x1080_raw10);
+	}
+	else if(a->parm.raw_data[0] == 2 && s_data->mode == 0)
+	{
+		printk("no binning mode\n");
+		imx274_write_table(priv, imx274_mode1_1920x1080_raw10_crop);
+	}
+
+        return 0;
+}
+
 static struct v4l2_subdev_video_ops imx274_subdev_video_ops = {
 	.s_stream	= imx274_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
-	.g_input_status	= imx274_g_input_status,
+	.g_input_status = imx274_g_input_status,
+	.s_parm = imx274_s_parm,
 };
 
 static struct v4l2_subdev_core_ops imx274_subdev_core_ops = {
@@ -669,36 +711,632 @@ fail:
 }
 
 #define IMX274_GAIN_SHIFT 8
-static int log_fun_table[23] = {
-       0,
-       222,
-       421,
-       598,
-       755,
-       896,
-       1021,
-       1133,
-       1232,
-       1321,
-       1400,
-       1470,
-       1533,
-       1589,
-       1639,
-      1683,
-      1723,
-      1758,
-      1790,
-      1818,
-      1843,
-      1865,
-      1885
+static int log_fun_table[270] = {
+0,
+23,
+47,
+70,
+92,
+115,
+137,
+159,
+180,
+202,
+223,
+244,
+264,
+285,
+305,
+325,
+345,
+364,
+383,
+402,
+421,
+440,
+458,
+476,
+494,
+512,
+530,
+547,
+564,
+581,
+598,
+615,
+631,
+647,
+663,
+679,
+695,
+710,
+726,
+741,
+756,
+771,
+785,
+800,
+814,
+828,
+842,
+856,
+869,
+883,
+896,
+910,
+923,
+935,
+948,
+961,
+973,
+985,
+998,
+1010,
+1022,
+1033,
+1045,
+1056,
+1068,
+1079,
+1090,
+1101,
+1112,
+1123,
+1133,
+1144,
+1154,
+1164,
+1174,
+1184,
+1194,
+1204,
+1214,
+1223,
+1233,
+1242,
+1251,
+1260,
+1269,
+1278,
+1287,
+1296,
+1304,
+1313,
+1321,
+1330,
+1338,
+1346,
+1354,
+1362,
+1370,
+1378,
+1385,
+1393,
+1400,
+1408,
+1415,
+1422,
+1430,
+1437,
+1444,
+1451,
+1457,
+1464,
+1471,
+1477,
+1484,
+1490,
+1497,
+1503,
+1509,
+1515,
+1522,
+1528,
+1534,
+1539,
+1545,
+1551,
+1557,
+1562,
+1568,
+1573,
+1579,
+1584,
+1590,
+1595,
+1600,
+1605,
+1610,
+1615,
+1620,
+1625,
+1630,
+1635,
+1639,
+1644,
+1649,
+1653,
+1658,
+1662,
+1667,
+1671,
+1675,
+1680,
+1684,
+1688,
+1692,
+1696,
+1700,
+1704,
+1708,
+1712,
+1716,
+1720,
+1723,
+1727,
+1731,
+1734,
+1738,
+1742,
+1745,
+1749,
+1752,
+1755,
+1759,
+1762,
+1765,
+1769,
+1772,
+1775,
+1778,
+1781,
+1784,
+1787,
+1790,
+1793,
+1796,
+1799,
+1802,
+1805,
+1807,
+1810,
+1813,
+1816,
+1818,
+1821,
+1823,
+1826,
+1829,
+1831,
+1834,
+1836,
+1838,
+1841,
+1843,
+1846,
+1848,
+1850,
+1852,
+1855,
+1857,
+1859,
+1861,
+1863,
+1865,
+1868,
+1870,
+1872,
+1874,
+1876,
+1878,
+1880,
+1882,
+1883,
+1885,
+1887,
+1889,
+1891,
+1893,
+1894,
+1896,
+1898,
+1900,
+1901,
+1903,
+1905,
+1906,
+1908,
+1910,
+1911,
+1913,
+1914,
+1916,
+1917,
+1919,
+1920,
+1922,
+1923,
+1925,
+1926,
+1927,
+1929,
+1930,
+1931,
+1933,
+1934,
+1935,
+1937,
+1938,
+1939,
+1941,
+1942,
+1943,
+1944,
+1945,
+1947,
+1948,
+1949,
+1950,
+1951,
+1952,
+1953,
+1954,
+1955
+
+};
+u16 mul_to_db[178] = {
+0,
+60,
+95,
+120,
+140,
+156,
+169,
+181,
+191,
+200,
+208,
+216,
+223,
+229,
+235,
+241,
+246,
+251,
+256,
+260,
+264,
+268,
+272,
+276,
+280,
+283,
+286,
+289,
+292,
+295,
+298,
+301,
+304,
+306,
+309,
+311,
+314,
+316,
+318,
+320,
+323,
+325,
+327,
+329,
+331,
+333,
+334,
+336,
+338,
+340,
+342,
+343,
+345,
+346,
+348,
+350,
+351,
+353,
+354,
+356,
+357,
+358,
+360,
+361,
+363,
+364,
+365,
+367,
+368,
+369,
+370,
+371,
+373,
+374,
+375,
+376,
+377,
+378,
+380,
+381,
+382,
+383,
+384,
+385,
+386,
+387,
+388,
+389,
+390,
+391,
+392,
+393,
+394,
+395,
+396,
+396,
+397,
+398,
+399,
+400,
+401,
+402,
+403,
+403,
+404,
+405,
+406,
+407,
+407,
+408,
+409,
+410,
+411,
+411,
+412,
+413,
+414,
+414,
+415,
+416,
+417,
+417,
+418,
+419,
+419,
+420,
+421,
+421,
+422,
+423,
+423,
+424,
+425,
+425,
+426,
+427,
+427,
+428,
+429,
+429,
+430,
+430,
+431,
+432,
+432,
+433,
+433,
+434,
+435,
+435,
+436,
+436,
+437,
+438,
+438,
+439,
+439,
+440,
+440,
+441,
+441,
+442,
+442,
+443,
+443,
+444,
+445,
+445,
+446,
+446,
+447,
+447,
+448,
+448,
+449,
+449,
+450,
+450
+
 };
 
-static int imx274_set_dgain(struct imx274 *priv, u16 dgain)
+u16 mul_to_db_low[141] = {
+0,
+8,
+16,
+23,
+29,
+35,
+41,
+46,
+51,
+56,
+60,
+64,
+68,
+72,
+76,
+80,
+83,
+86,
+89,
+92,
+95,
+98,
+101,
+104,
+106,
+109,
+111,
+114,
+116,
+118,
+120,
+123,
+125,
+127,
+129,
+131,
+133,
+134,
+136,
+138,
+140,
+142,
+143,
+145,
+146,
+148,
+150,
+151,
+153,
+154,
+156,
+157,
+158,
+160,
+161,
+163,
+164,
+165,
+167,
+168,
+169,
+170,
+171,
+173,
+174,
+175,
+176,
+177,
+178,
+180,
+181,
+182,
+183,
+184,
+185,
+186,
+187,
+188,
+189,
+190,
+191,
+192,
+193,
+194,
+195,
+196,
+196,
+197,
+198,
+199,
+200,
+201,
+202,
+203,
+203,
+204,
+205,
+206,
+207,
+207,
+208,
+209,
+210,
+211,
+211,
+212,
+213,
+214,
+214,
+215,
+216,
+217,
+217,
+218,
+219,
+219,
+220,
+221,
+221,
+222,
+223,
+223,
+224,
+225,
+225,
+226,
+227,
+227,
+228,
+229,
+229,
+230,
+230,
+231,
+232,
+232,
+233,
+233,
+234,
+235,
+235
+
+};
+
+static u16 imx274_to_real_gain(u32 rep, int shift)
 {
-	imx274_write_reg(priv->s_data, 0x3012, dgain);
-	return 0;
+	u16 gain;
+	int gain_int;
+	int gain_dec;
+	int min_int = (1 << shift);
+
+	if (rep < IMX274_MIN_GAIN << 8)
+		rep = IMX274_MIN_GAIN << 8;
+	else if (rep > IMX274_MAX_GAIN << 8)
+		rep = IMX274_MAX_GAIN << 8;
+
+	gain_int = (int)(rep >> shift);
+	gain_dec = (int)(rep & ~(0xffff << shift));
+
+	rep = gain_int * min_int + gain_dec;
+	rep = 2048 - (2048 * min_int) / rep ;
+
+	gain = (u16)rep;
+
+	return gain;
+}
+
+static void imx274_set_dgain(struct imx274 *priv, u16 dgain)
+{
+	imx274_write_reg(priv->s_data, 0x3012, (u8)dgain);
 }
 
 static int imx274_set_gain(struct imx274 *priv, s64 val)
@@ -707,37 +1345,52 @@ static int imx274_set_gain(struct imx274 *priv, s64 val)
 	int err;
 	u16 gain;
 	int i;
+	u16 dbgain = 0;
+	u32 tmp_val = 0;
+	int only_analog_gain = 0;
+
 
 	dev_dbg(&priv->i2c_client->dev, "%s - val = %lld\n", __func__, val);
 
 	if (!priv->group_hold_prev)
 		imx274_set_group_hold(priv);
 
+	tmp_val = val * 1000 / FIXED_POINT_SCALING_FACTOR;
+	val = tmp_val /100;
 
-	val = val / FIXED_POINT_SCALING_FACTOR;
-	dev_dbg(&priv->i2c_client->dev, "input gain value: %lld\n", val);
-
+	dev_dbg(&priv->i2c_client->dev, "input gain value: %d\n", tmp_val);
 	if (val < IMX274_MIN_GAIN)
-		val = IMX274_MIN_GAIN;
-	else if (val > IMX274_MAX_GAIN)
-		val = IMX274_MAX_GAIN;
-	if (val > 18) {
+                val = IMX274_MIN_GAIN;
+        else if (val > IMX274_MAX_GAIN * 10)
+                val = IMX274_MAX_GAIN * 10 ;
+	if(val < 140)
+		dbgain = mul_to_db_low[val - 10];
+	else
+		dbgain = mul_to_db[val/10 - 1];
+
+	if (val >= 80) {
+		dbgain = dbgain - 180;
 		imx274_set_dgain(priv, 3);
-		val -= 18;
-	} else if (val > 12) {
+	} else if (val >= 40) {
+		dbgain = dbgain - 120;
 		imx274_set_dgain(priv, 2);
-		val -= 12;
-	} else if (val > 6) {
-		imx274_set_dgain(priv, 1);
-		val -= 6;
 	} else {
 		imx274_set_dgain(priv, 0);
+		only_analog_gain = 1;
 	}
 
-	gain = log_fun_table[val];
+	if(dbgain > 269)
+		dbgain = 269;
+	if(only_analog_gain)
+	{
+		u32 tmp_val_int = tmp_val /1000;
+		gain = imx274_to_real_gain((tmp_val/1000) * 256 + ((tmp_val-tmp_val_int*1000)*255/1000) , 8);
+	}
+	else
+		gain = log_fun_table[dbgain];
 	imx274_get_gain_regs(reg_list, gain);
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: gain: %04x\n", __func__, gain);
+		"%s: gain %04x val: %04x dbgain:%d\n", __func__, (u32)val, gain, dbgain);
 
 	for (i = 0; i < 2; i++) {
 		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
@@ -767,9 +1420,9 @@ static int imx274_set_frame_length(struct imx274 *priv, u32 val)
 		imx274_set_group_hold(priv);
 
 	frame_length = (u32)val;
-	priv->frame_length = frame_length;
 
-	imx274_get_frame_length_regs(reg_list, frame_length);
+	priv->frame_length = frame_length;
+ 	imx274_get_frame_length_regs(reg_list, frame_length);
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %d\n", __func__, frame_length);
 
@@ -856,15 +1509,22 @@ fail:
 static int imx274_set_exposure(struct imx274 *priv, s64 val)
 {
 	int err;
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
 	s64 coarse_time;
 
-	//coarse_time = mode[s_data->mode].pixel_clock * val /
-	//	priv->frame_length / FIXED_POINT_SCALING_FACTOR;
-	coarse_time = val * 9230 / 139810;
-
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %lld, frame_length = %d, coarse_time = %lld\n", __func__,
-		val, priv->frame_length, coarse_time);
+		 "%s: val: %lld, frame_lengh = %d \n", __func__, val, priv -> frame_length);
+
+	//coarse_time = mode[s_data->mode].pixel_clock * val /
+	//	priv -> frame_length / FIXED_POINT_SCALING_FACTOR;
+
+	coarse_time = (mode[s_data->mode].pixel_clock * val
+		/ FIXED_POINT_SCALING_FACTOR - 112) / mode[s_data->mode].line_length;
+
+        dev_dbg(&priv->i2c_client->dev,
+                 "%s: val: %lld, frame_length = %d, coarse_time = %lld\n", __func__,
+		 val, priv->frame_length, coarse_time);
 
 	err = imx274_set_coarse_time(priv, (s32) coarse_time);
 	if (err)
@@ -1101,6 +1761,71 @@ static const struct media_entity_operations imx274_media_ops = {
 	.link_validate = v4l2_subdev_link_validate,
 };
 
+
+static ssize_t sysfs_read_frame_error(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+
+	return sprintf(buf, "frame count from isp: %lld\n", frame_count);
+}
+
+static ssize_t sysfs_read_mipi_error(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	char buffer[2048] = {0};
+
+	tegra_mipi_status(buffer, 2048);
+	//printk("%s\n", buffer);
+	return sprintf(buf, "%s\n", buffer);
+}
+
+static ssize_t sysfs_read_i2c_error(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	u8 val = 0;
+	int ret = 0;
+	int csi_port = 0;
+	printk("kobj name = %s\n", kobj->name);
+
+	csi_port = *(kobj->name + 7) - 'a';
+	if (csi_port < 0 || csi_port >= ARRAY_SIZE(priv_global))
+		ret = -EINVAL;
+	else {
+		printk("priv addr = %p\n", priv_global[csi_port]);
+		if (NULL != priv_global[csi_port])
+			ret = imx274_read_reg(priv_global[csi_port]->s_data,
+					      0x300B, &val);
+		else
+			return sprintf(buf, "%s \n", "sensor not initial");
+	}
+	if (ret) {
+		return sprintf(buf, "%s \n", "i2c link error or the sensor not working");
+	} else {
+		return sprintf(buf, "%s \n", "i2c status ok");
+	}
+}
+
+static ssize_t sysfs_clear_frame_count(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+    char kbuf[1024] = {0};
+    strncpy(kbuf,buf,count);
+    if(kbuf[0] == '0')
+	frame_count = 0;
+    return count;
+}
+
+static struct kobj_attribute imx274_sysfs_i2c_error =__ATTR(i2c, S_IRUGO, sysfs_read_i2c_error, NULL);
+static struct kobj_attribute imx274_sysfs_mipi_error =__ATTR(mipi, S_IRUGO, sysfs_read_mipi_error, NULL);
+static struct kobj_attribute imx274_sysfs_frame_num =__ATTR(frame, 0664, sysfs_read_frame_error, sysfs_clear_frame_count);
+
+static struct attribute *imx274_sysfs_error[] = {
+	&imx274_sysfs_i2c_error.attr,
+	&imx274_sysfs_mipi_error.attr,
+	&imx274_sysfs_frame_num.attr,
+ NULL,
+};
+
+static struct attribute_group imx274_attr_group = {
+ .attrs = imx274_sysfs_error,
+};
+
 static int imx274_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1202,8 +1927,25 @@ static int imx274_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
+	priv->soc_kobj = kobject_create_and_add(debugfs_name, NULL);
+	if (!priv->soc_kobj)
+		goto err_board_obj;
+	err = sysfs_create_group(priv->soc_kobj, &imx274_attr_group);
+	if (err)
+		goto err_soc_sysfs_create;
+
+	priv_global[common_data->csi_port] = priv;
+	tegra_isp_register_mfi_cb(calculate_frames_from_isp, NULL);
 	dev_dbg(&client->dev, "Detected IMX274 sensor\n");
 	return 0;
+err_soc_sysfs_create:
+	kobject_put(priv->soc_kobj);
+	//sysfs_remove_group(priv->soc_kobj, &imx274_attr_group);
+	printk("\nsysfs_create_group ERROR : %s\n",__func__);
+	return 0;
+err_board_obj:
+	printk("\nobject_create_and_add ERROR : %s\n",__func__);
+ 	return 0;
 }
 
 static int
@@ -1220,6 +1962,8 @@ imx274_remove(struct i2c_client *client)
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	imx274_power_put(priv);
 	camera_common_remove_debugfs(s_data);
+	kobject_put(priv->soc_kobj);
+	sysfs_remove_group(priv->soc_kobj, &imx274_attr_group);
 
 	return 0;
 }
