@@ -77,7 +77,7 @@ static void * videoout_dc_alloc(void * alloc_ctx, unsigned long size, gfp_t gfp_
 
     DEBUG(memory, "driver_data at index %u, offset %u (next offset: %u)\n", buf->indices_used, buf->next_offset, next_offset);
 
-    if (buf->indices_used >= EUTECUS_MAX_NUMBER_OF_FRAMES || buf->frames+next_offset > data->end_buffers) {
+    if (buf->indices_used >= EUTECUS_MAX_NUMBER_OF_FRAMES || (const void*)(buf->frames+next_offset) > data->end_buffers) {
         printk("ERROR: not enough space in the PCI structure for %lu bytes!\n", size);
         LEAVE();
         return ERR_PTR(-ENOMEM);
@@ -93,7 +93,7 @@ static void * videoout_dc_alloc(void * alloc_ctx, unsigned long size, gfp_t gfp_
 
     buf->next_offset = next_offset;
 
-    DEBUG(memory, "allocated buffer at %p, frame size=%d\n", dc->frame, size);
+    DEBUG(memory, "allocated buffer at %p, frame size=%lu\n", dc->frame, size);
 
     dc->parent = buf;
 
@@ -141,7 +141,7 @@ static void videoout_dc_put(void * buf_priv)
 
     if (parent->next_offset >= frame->header.full_size) {
         parent->next_offset -= frame->header.full_size;
-        DEBUG(memory, "last offset: %p \n", (void*)parent->next_offset);
+        DEBUG(memory, "last offset: %#x \n", parent->next_offset);
     } else {
         ERROR("video DC offset is negative (offset=%u, full size=%u, frame size: %u)\n", parent->next_offset, frame->header.full_size, frame->header.frame_size);
     }

@@ -14,6 +14,8 @@
 #define __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_SHARED_H_INCLUDED__
 
 #include <linux/types.h>
+#include <linux/time.h>
+#include <linux/videodev2.h>
 
 #define EUTECUS_MAX_NUMBER_OF_FRAMES    16
 
@@ -67,6 +69,7 @@ struct eutecus_v4l2_header {
     u32 frame_size;
 
     /// Serial number (timestamp) of the frame
+    /*! \see \ref next_serial for more details */
     u32 serial;
 
     /// State of this frame
@@ -96,6 +99,33 @@ struct eutecus_v4l2_header {
         u64 vob;
 
     } PACKED tegra;
+
+    /// Timestamp passthrough
+    /*! This information comes from the v4l2 frame header on the Tegra side, and passed to the CycloneV side as is. */
+    struct {
+        /// Seconds of v4l2 timestamp
+        /*! Note: the original struct timeval cannot be used here because it is treated differently on 32/64 bit platforms. */
+        s64 seconds;
+
+        /// Microseconds of v4l2 timestamp
+        s64 microseconds;
+
+        /// v4l2 timecode
+        struct v4l2_timecode timecode;
+
+        /// v4l2 frame sequence number
+        u32 sequence;
+
+        /// v4l2 frame index
+        u32 index;
+
+        /// v4l2 frame flags
+        u32 flags;
+
+        /// v4l2 frame field
+        u32 field;
+
+    } PACKED;
 
 } PACKED;
 
@@ -145,6 +175,8 @@ struct eutecus_v4l2_buffers {
             u32 next_offset;
 
             /// Current serial number (timestamp) of the frame
+            /*! \note   It is calculated by the sink-side driver, mainly for debug purposes. The driver prints this serial number in the
+                        debug messages, but the V4l2 system has its own serial number. */
             u32 next_serial;
 
             u32 dummy;          ///< Just for 64-bit alignment
@@ -162,7 +194,7 @@ struct eutecus_v4l2_buffers {
                 u32 numerator;          ///< FPS numerator
                 u32 denominator;        ///< FPS denominator
                 u32 active;             ///< Nonzero if the stream is running
-		u32 dummy;
+                u32 dummy;              ///< Just for 64-bit alignment
 
             } PACKED stream;
 
