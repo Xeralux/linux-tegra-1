@@ -23,8 +23,22 @@ static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct vid
 
     switch (frame->header.state) {
         case FRAME_READY:
+            {
+                struct eutecus_v4l2_header * h = &frame->header;
+                const struct v4l2_buffer * b = &vob->vb.v4l2_buf;
+                // Copy some v4l2 information:
+                h->seconds      = b->timestamp.tv_sec;
+                h->microseconds = b->timestamp.tv_usec;
+                h->timecode     = b->timecode;
+                h->sequence     = b->sequence;
+                h->index        = b->index;
+                h->flags        = b->flags;
+                h->field        = b->field;
+            }
+            // Setup the buffer state:
             frame->header.tegra.vob = (u64)vob;
             frame->header.state = FRAME_BUSY;
+            // Ready:
             interrupt_request_2_RS4(buf->tegra.pci);    /* Send an interrupt to the analytics: the frame is to be processed */
             DEBUG(video, "Got frame #%u (state: ready -> busy) at %p (IRQ)\n", serial, frame);
         break;
