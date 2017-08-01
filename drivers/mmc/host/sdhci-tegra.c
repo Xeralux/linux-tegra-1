@@ -244,7 +244,7 @@ struct sdhci_tegra {
 static void tegra_sdhci_do_calibration(struct sdhci_host *sdhci,
 	unsigned char signal_voltage);
 /* Module Params declarations */
-static unsigned int en_boot_part_access;
+static unsigned int en_boot_part_access = 1;
 
 static int tegra_sdhci_configure_regulators(struct sdhci_host *sdhci,
 	u8 option, int min_uV, int max_uV);
