@@ -22,6 +22,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
+#include <linux/atomic.h>
 #include <linux/module.h>
 
 #include <linux/seq_file.h>
@@ -61,6 +62,7 @@
 extern int tegra_mipi_status(char * buf, int len);
 typedef void (*callback)(void *);
 extern int tegra_isp_register_mfi_cb(callback cb, void *cb_arg);
+static atomic_t isp_cb_registered = ATOMIC_INIT(0);
 
 struct imx274 {
 	struct camera_common_power_rail	power;
@@ -1935,7 +1937,8 @@ static int imx274_probe(struct i2c_client *client,
 		goto err_soc_sysfs_create;
 
 	priv_global[common_data->csi_port] = priv;
-	tegra_isp_register_mfi_cb(calculate_frames_from_isp, NULL);
+	if (!atomic_cmpxchg(&isp_cb_registered, 0, 1))
+		tegra_isp_register_mfi_cb(calculate_frames_from_isp, NULL);
 	dev_dbg(&client->dev, "Detected IMX274 sensor\n");
 	return 0;
 err_soc_sysfs_create:
