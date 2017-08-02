@@ -51,32 +51,46 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			channel@0 {
+				reg = <0>;
 				status = "okay";
 				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
 					csi_chan0_port0: port@0 {
+						reg = <0>;
 						status = "okay";
 						csi_in0: endpoint@0 {
-							status = "okay";
+							csi-port = <0>;
+							bus-width = <4>;
 							remote-endpoint = <&imx274_out0>;
 						};
+					};
+					port@1 {
+						reg = <1>;
 						csi_out0: endpoint@1 {
-							status = "okay";
 							remote-endpoint = <&vi_in0>;
 						};
 					};
 				};
 			};
-			channel@2 {
+			channel@1 {
+				reg = <1>;
 				status = "okay";
 				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
 					csi_chan2_port0: port@0 {
+						reg = <0>;
 						status = "okay";
-						csi_in2: endpoint@4 {
-							status = "okay";
+						csi_in2: endpoint@2 {
+							csi-port = <2>;
+							bus-width = <4>;
 							remote-endpoint = <&imx274_out1>;
 						};
-						csi_out2: endpoint@5 {
-							status = "okay";
+					};
+					port@1 {
+						reg = <1>;
+						csi_out2: endpoint@3 {
 							remote-endpoint = <&vi_in1>;
 						};
 					};
