@@ -132,9 +132,7 @@ int nvgpu_probe(struct gk20a *g,
 	/* Initialize the platform interface. */
 	err = platform->probe(g->dev);
 	if (err) {
-		if (err == -EPROBE_DEFER)
-			dev_info(g->dev, "platform probe failed");
-		else
+		if (err != -EPROBE_DEFER)
 			dev_err(g->dev, "platform probe failed");
 		return err;
 	}
