@@ -518,7 +518,7 @@ asmlinkage void __exception handle_serr(unsigned long daif, unsigned long spsr,
 
 	pr_crit("CPU%d: SError detected, daif=%lx, "
 		"spsr=0x%lx, mpidr=%lx, esr=%lx\n",
-		smp_processor_id(), daif, spsr, mpidr, esr);
+		raw_smp_processor_id(), daif, spsr, mpidr, esr);
 
 #ifdef CONFIG_SERROR_HANDLER
 	raw_spin_lock_irqsave(&serr_lock, flags);
