@@ -59,10 +59,13 @@
 #define IMX274_DEFAULT_HEIGHT	2160
 #define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
+
+#if 0
 extern int tegra_mipi_status(char * buf, int len);
 typedef void (*callback)(void *);
 extern int tegra_isp_register_mfi_cb(callback cb, void *cb_arg);
 static atomic_t isp_cb_registered = ATOMIC_INIT(0);
+#endif
 
 struct imx274 {
 	struct camera_common_power_rail	power;
@@ -217,12 +220,14 @@ static int imx274_set_frame_length(struct imx274 *priv, u32 val);
 static int imx274_set_frame_rate(struct imx274 *priv, s64 val);
 static int imx274_set_exposure(struct imx274 *priv, s64 val);
 
+#if 0
 static unsigned long long frame_count = 0;
 
 void calculate_frames_from_isp(void *ctx)
 {
 	frame_count++;
 }
+#endif
 
 static inline int imx274_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
@@ -1764,6 +1769,7 @@ static const struct media_entity_operations imx274_media_ops = {
 };
 
 
+#if 0
 static ssize_t sysfs_read_frame_error(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 
@@ -1778,6 +1784,7 @@ static ssize_t sysfs_read_mipi_error(struct kobject *kobj, struct kobj_attribute
 	//printk("%s\n", buffer);
 	return sprintf(buf, "%s\n", buffer);
 }
+#endif
 
 static ssize_t sysfs_read_i2c_error(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -1804,6 +1811,7 @@ static ssize_t sysfs_read_i2c_error(struct kobject *kobj, struct kobj_attribute 
 	}
 }
 
+#if 0
 static ssize_t sysfs_clear_frame_count(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
     char kbuf[1024] = {0};
@@ -1812,16 +1820,21 @@ static ssize_t sysfs_clear_frame_count(struct kobject *kobj, struct kobj_attribu
 	frame_count = 0;
     return count;
 }
+#endif
 
 static struct kobj_attribute imx274_sysfs_i2c_error =__ATTR(i2c, S_IRUGO, sysfs_read_i2c_error, NULL);
+#if 0
 static struct kobj_attribute imx274_sysfs_mipi_error =__ATTR(mipi, S_IRUGO, sysfs_read_mipi_error, NULL);
 static struct kobj_attribute imx274_sysfs_frame_num =__ATTR(frame, 0664, sysfs_read_frame_error, sysfs_clear_frame_count);
+#endif
 
 static struct attribute *imx274_sysfs_error[] = {
 	&imx274_sysfs_i2c_error.attr,
+#if 0
 	&imx274_sysfs_mipi_error.attr,
 	&imx274_sysfs_frame_num.attr,
- NULL,
+#endif
+	NULL,
 };
 
 static struct attribute_group imx274_attr_group = {
@@ -1937,8 +1950,10 @@ static int imx274_probe(struct i2c_client *client,
 		goto err_soc_sysfs_create;
 
 	priv_global[common_data->csi_port] = priv;
+#if 0
 	if (!atomic_cmpxchg(&isp_cb_registered, 0, 1))
 		tegra_isp_register_mfi_cb(calculate_frames_from_isp, NULL);
+#endif
 	dev_dbg(&client->dev, "Detected IMX274 sensor\n");
 	return 0;
 err_soc_sysfs_create:
