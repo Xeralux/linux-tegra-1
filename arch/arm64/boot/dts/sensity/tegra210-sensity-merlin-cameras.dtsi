@@ -28,13 +28,9 @@
 			imx274_a@1a {
 				clocks = <&tegra_car TEGRA210_CLK_CLK_OUT_3>;
 				clock-names = "clk_out_3";
+				clock-frequency = <24000000>;
 				mclk = "clk_out_3";
 				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_LOW>;
-			};
-			cam1_accel: lis2dh@18 {
-				compatible = "st,lis2dh";
-				reg = <0x18>;
-				#io-channel-cells = <1>;
 			};
 		};
 	};
@@ -43,13 +39,9 @@
 		imx274_c@1a {
 			clocks = <&tegra_car TEGRA210_CLK_CLK_OUT_3>;
 			clock-names = "clk_out_3";
+			clock-frequency = <24000000>;
 			mclk = "clk_out_3";
 			reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_LOW>;
-		};
-		cam2_accel: lis2dh@18 {
-			compatible = "st,lis2dh";
-			reg = <0x18>;
-			#io-channel-cells = <1>;
 		};
 	};
 
