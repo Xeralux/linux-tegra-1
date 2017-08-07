@@ -29,6 +29,7 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
+					status = "okay";
 					vi_in0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
@@ -37,6 +38,7 @@
 				};
 				port@1 {
 					reg = <1>;
+					status = "okay";
 					vi_in1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
@@ -67,6 +69,7 @@
 					};
 					port@1 {
 						reg = <1>;
+						status = "okay";
 						csi_out0: endpoint@1 {
 							remote-endpoint = <&vi_in0>;
 						};
@@ -90,6 +93,7 @@
 					};
 					port@1 {
 						reg = <1>;
+						status = "okay";
 						csi_out2: endpoint@3 {
 							remote-endpoint = <&vi_in1>;
 						};
@@ -514,6 +518,13 @@
 			};
 		};
 	};
+	lens_imx274@A6V24 {
+		min_focus_distance = "0.0";
+		hyper_focal = "0.0";
+		focal_length = "5.00";
+		f_number = "2.0";
+		aperture = "2.2";
+	};
 };
 
 /* camera control gpio definitions */
@@ -576,6 +587,11 @@
 					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/imx274_a@1a";
 					status = "okay";
 				};
+				drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
+				};
 			};
 			module1 {
 				badge = "imx274_bottomright_A6V24";
@@ -590,6 +606,11 @@
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@7000c500/imx274_c@1a";
 					status = "okay";
+				};
+				drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
 				};
 			};
 		};
