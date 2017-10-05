@@ -413,11 +413,9 @@
 				 nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
-			usb3-std-A-port0 {
-				 nvidia,lanes = "uphy-lane-5";
-				 nvidia,function = "usb3";
-				 nvidia,usb3-port = <1>;
-				 nvidia,usb2-map = <2>;
+			usb2-socfpga {
+				 nvidia,lanes = "otg-3";
+				 nvidia,function = "xusb";
 				 nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
@@ -467,11 +465,11 @@
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
 		phys =	<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
-			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
-		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(3)>;
+		phy-names = "utmi-2", "utmi-1", "usb3-0", "utmi-0", "utmi-3";
 		nvidia,pmc-wakeup =
 			<&tegra_pmc
 				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
