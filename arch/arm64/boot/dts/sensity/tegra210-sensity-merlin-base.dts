@@ -34,7 +34,6 @@
 #include <t210-common-platforms/tegra210-thermal-nct72-p2530.dtsi>
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
-#include "jetson-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
 #include <t210-common-platforms/tegra210-cpufreq.dtsi>
 #include <t210-common-overrides/tegra210-power-dvfs-override-ucm2c.dtsi>
 
@@ -765,7 +764,7 @@
 			reg = <0x48>;
 		};
 		ina3221x@40 {
-			status = "enabled";
+			status = "okay";
 			channel@0 {
 				ti,current-critical-limit-ma = <3333>;
 			};
