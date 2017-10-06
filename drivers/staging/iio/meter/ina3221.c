@@ -1485,10 +1485,17 @@ static const struct i2c_device_id ina3221_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ina3221_id);
 
+static const struct of_device_id ina3221_dt_id[] = {
+	{ .compatible = "ti,ina3221x" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, ina3221_dt_id);
+
 static struct i2c_driver ina3221_driver = {
 	.driver = {
 		.name	= "ina3221x",
 		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(ina3221_dt_id),
 		.pm = &ina3221_pm_ops,
 	},
 	.probe		= ina3221_probe,
