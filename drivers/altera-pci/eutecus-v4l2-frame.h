@@ -47,7 +47,7 @@ inline static u64 eutecus_get_v4l2_physical_by_index(struct eutecus_v4l2_buffers
     return (u64)((struct eutecus_v4l2_buffers *)buf->tegra.kernel_address)->frames[buf->offset[index]].frame->payload;
 }
 
-void eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t phys_start);
+int eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t phys_start);
 
 #define FOURCC_CHARS(p) (((p) >> 0) & 0xff), (((p) >> 8) & 0xff), (((p) >> 16) & 0xff), (((p) >> 24) & 0xff)
 #define FOURCC_FORMAT   "%c%c%c%c"

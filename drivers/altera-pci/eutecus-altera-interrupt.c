@@ -12,14 +12,14 @@
 
 #include <asm/delay.h>
 
-static void videoout_interrupt_from_analitics(struct eutecus_pci_data * data)
+static int videoout_interrupt_from_analitics(struct eutecus_pci_data * data)
 {
     struct eutecus_v4l2_buffers * buf = data->frame_buffers;
     u32 i;
 
     if (buf->indices_used > EUTECUS_MAX_NUMBER_OF_FRAMES) {
-        ERROR("too many buffers: %u\n", buf->indices_used);
-        return;
+        ERROR("The PCI memory map is probably lost!\n");
+        return -ENODEV;
     }
 
     for (i = 0; i < buf->indices_used; ++i) {
@@ -27,7 +27,7 @@ static void videoout_interrupt_from_analitics(struct eutecus_pci_data * data)
 
         if (((u64)frame) & (PAGE_SIZE-1)) {
             ERROR("unaligned frame: index=%u of %u, at %p, offset=%u (internal driver error)\n", i, buf->indices_used, frame, buf->offset[i]);
-            return;
+            return 0;
         }
 
         DEBUG(video, "frame #%u is %s at %p\n", frame->header.serial, get_frame_state_name(frame), frame);
@@ -56,6 +56,8 @@ static void videoout_interrupt_from_analitics(struct eutecus_pci_data * data)
             break;
         }
     }
+
+    return 0;
 }
 
 irqreturn_t eutecus_pci_isr(int this_irq, void * param)
@@ -64,7 +66,11 @@ irqreturn_t eutecus_pci_isr(int this_irq, void * param)
     struct eutecus_pci_data * data = pci_get_drvdata(dev);
 
     if (data->frame_buffers) {
-        videoout_interrupt_from_analitics(data);
+        if (videoout_interrupt_from_analitics(data)) {
+            ERROR("To prevent further problems, the device interrupt (#%d) is disabled. The V4l2 connection will not work. This module must be reloaded.\n", (int)data->irq);
+            free_irq(data->irq, dev);
+            data->irq = 0;
+        }
     }
 
     interrupt_acknowledge_2_RS4(data);

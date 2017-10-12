@@ -169,7 +169,7 @@ struct eutecus_v4l2_buffers {
     union {
         struct {
             /// Number of entries used in the \ref offset[] array
-            u32 indices_used;
+            u32 volatile indices_used;
 
             /// Byte offset of the first free entry in the \ref frames[] array
             u32 next_offset;
