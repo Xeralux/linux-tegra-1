@@ -15,13 +15,23 @@ extern const struct vb2_mem_ops vb2_dma_contig_memops;
 
 static void videoout_dc_put(void * buf_priv);   // see below
 
-void eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t phys_start)
+int eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t phys_start)
 {
     ENTER();
     DEBUG(memory, "v4l2 buffer at %p: phys=%p \n", buf, (void*)phys_start);
 
     // Initialize variables (excluding the CycloneV related ones):
     buf->indices_used = 0;
+
+    // Check the FPGA shared memory availability:
+    // We found that the FPGA memory can be problematic: sometimes it is not initialized correctly
+    // and no memory accessible at this address. It can be detected here:
+    if (buf->indices_used) {
+        ERROR("the FPGA memory is not available! It means that the FPGA has not been initialized yet, probably there was problem with SocFPGA booting.\n");
+        LEAVE_V("%d", -ENODEV);
+        return -ENODEV;
+    }
+
     buf->next_offset = 0;
     buf->next_serial = 0;
     memset(buf->offset, 0, sizeof(buf->offset));
@@ -30,7 +40,8 @@ void eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_
     // Set up the physical address:
     buf->tegra.kernel_address = phys_start;
 
-    LEAVE();
+    LEAVE_V("%d", 0);
+    return 0;
 }
 
 static struct eutecus_v4l2_frame * eutecus_init_v4l2_frame_by_index(struct eutecus_v4l2_buffers * buf, unsigned int index, unsigned long size)

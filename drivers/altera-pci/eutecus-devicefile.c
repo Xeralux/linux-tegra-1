@@ -136,6 +136,7 @@ int init_cfile(struct eutecus_pci_data * data, struct pci_dev * dev)
         for (i = 0; i < sizeof(resource_table)/sizeof(resource_table[0]); ++i) {
             st = init_resource(data, resource_table[i].index, resource_table[i].pci_resource);
             if (st) {
+                ERROR("PCI resource #%d initialization failed\n", i);
                 break;
             }
         }
