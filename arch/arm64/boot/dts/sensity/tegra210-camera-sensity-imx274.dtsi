@@ -29,22 +29,21 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					status = "okay";
-					vi_in0: endpoint {
+					liimx274_vi_in0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_out0>;
+						remote-endpoint = <&liimx274_csi_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					status = "okay";
-					vi_in1: endpoint {
-						csi-port = <2>;
+					liimx274_vi_in1: endpoint {
+						csi-port = <1>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_out2>;
+						remote-endpoint = <&liimx274_csi_out1>;
 					};
 				};
+
 			};
 		};
 
@@ -54,48 +53,42 @@
 			#size-cells = <0>;
 			channel@0 {
 				reg = <0>;
-				status = "okay";
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
-					csi_chan0_port0: port@0 {
+					port@0 {
 						reg = <0>;
-						status = "okay";
-						csi_in0: endpoint@0 {
+						liimx274_csi_in0: endpoint@0 {
 							csi-port = <0>;
 							bus-width = <4>;
-							remote-endpoint = <&imx274_out0>;
+							remote-endpoint = <&liimx274_imx274_out0>;
 						};
 					};
 					port@1 {
 						reg = <1>;
-						status = "okay";
-						csi_out0: endpoint@1 {
-							remote-endpoint = <&vi_in0>;
+						liimx274_csi_out0: endpoint@1 {
+							remote-endpoint = <&liimx274_vi_in0>;
 						};
 					};
 				};
 			};
 			channel@1 {
 				reg = <1>;
-				status = "okay";
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
-					csi_chan2_port0: port@0 {
+					port@0 {
 						reg = <0>;
-						status = "okay";
-						csi_in2: endpoint@2 {
+						liimx274_csi_in1: endpoint@0 {
 							csi-port = <2>;
 							bus-width = <4>;
-							remote-endpoint = <&imx274_out1>;
+							remote-endpoint = <&liimx274_imx274_out1>;
 						};
 					};
 					port@1 {
 						reg = <1>;
-						status = "okay";
-						csi_out2: endpoint@3 {
-							remote-endpoint = <&vi_in1>;
+						liimx274_csi_out1: endpoint@1 {
+							remote-endpoint = <&liimx274_vi_in1>;
 						};
 					};
 				};
@@ -121,11 +114,14 @@
 				sensor_model = "imx274";
 				/* Define any required hw resources needed by driver */
 				/* ie. clocks, io pins, power sources */
+				devnode = "video0";
 
 				/* Defines number of frames to be dropped by driver internally after applying */
 				/* sensor crop settings. Some sensors send corrupt frames after applying */
 				/* crop co-ordinates */
 				post_crop_frame_drop = "0";
+				/* if true, delay gain setting by one frame to be in sync with exposure */
+				delayed_gain = "true";
 
 				/**
 				* A modeX node is required to support v4l2 driver
@@ -212,82 +208,67 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
+				mode0 {
+					mclk_khz = "24000";
+					num_lanes = "4";
+					tegra_sinterface = "serial_a";
+					discontinuous_clk = "yes";
+					dpcm_enable = "false";
+					cil_settletime = "0";
 
-						mode0 { // IMX274_MODE_3840X2160
-							mclk_khz = "24000";
-							num_lanes = "4";
-							tegra_sinterface = "serial_a";
-							discontinuous_clk = "yes";
-							dpcm_enable = "false";
-							cil_settletime = "0";
+					active_w = "1920";
+					active_h = "1080";
+					pixel_t = "bayer_rggb";
+					readout_orientation = "90";
+					line_length = "4200";
+					inherent_gain = "1";
+					mclk_multiplier = "25";
+					pix_clk_hz = "756000000";
 
-							dynamic_pixel_bit_depth = "10";
-							csi_pixel_bit_depth = "10";
-							mode_type = "bayer";
-							pixel_phase = "rggb";
-							pixel_t = "bayer_rggb";
+					min_gain_val = "1.0";
+					max_gain_val = "22.2";
+					min_hdr_ratio = "1";
+					max_hdr_ratio = "64";
+					min_framerate = "1.462526";
+					max_framerate = "60";
+					min_exp_time = "16.165";
+					max_exp_time = "165770";
+				};
+				mode1 {
+					mclk_khz = "24000";
+					num_lanes = "4";
+					tegra_sinterface = "serial_a";
+					discontinuous_clk = "yes";
+					dpcm_enable = "false";
+					cil_settletime = "0";
 
-							active_w = "1920";
-							active_h = "1080";
-							readout_orientation = "0";
-							line_length = "2080"; // hmax (260) * 8
-							inherent_gain = "1";
-							mclk_multiplier = "25";  // pll * num_lanes
-							pix_clk_hz = "576000000"; // imx274 : 576000000 = 72Mhz * 8
+					active_w = "3840";
+					active_h = "2160";
+					pixel_t = "bayer_rggb";
+					readout_orientation = "90";
+					line_length = "4200";
+					inherent_gain = "1";
+					mclk_multiplier = "25";
+					pix_clk_hz = "756000000";
 
-							min_gain_val = "1.0"; // defined in imx274.c
-							max_gain_val = "178"; // defined in imx274.c
-							min_hdr_ratio = "1";
-							max_hdr_ratio = "64";
-							min_framerate = "4.2264"; // = 1 / max_exp_time
-							max_framerate = "60";
-							min_exp_time = "15"; // 4 line time (minimal 4 lines), in micro-second
-							max_exp_time = "236610"; // max exposure time = 65535-12 lines (defined in imx274.c), in micro-second
-							//embedded_metadata_height = "4";
-						};
-						mode1 { // IMX274_MODE_1920X1080
-							mclk_khz = "24000";
-							num_lanes = "4";
-							tegra_sinterface = "serial_a";
-							discontinuous_clk = "yes";
-							dpcm_enable = "false";
-							cil_settletime = "0";
-
-							dynamic_pixel_bit_depth = "10";
-							csi_pixel_bit_depth = "10";
-							mode_type = "bayer";
-							pixel_phase = "rggb";
-							pixel_t = "bayer_rggb";
-
-							active_w = "3840";
-							active_h = "2160";
-							readout_orientation = "90";
-							line_length = "2080"; // hmax (260) * 8
-							inherent_gain = "1";
-							mclk_multiplier = "25";  // pll * num_lanes
-							pix_clk_hz = "576000000"; // imx274 : 576000000 = 72Mhz * 8
-
-							min_gain_val = "1.0"; // defined in imx274.c
-							max_gain_val = "178"; // defined in imx274.c
-							min_hdr_ratio = "1";
-							max_hdr_ratio = "64";
-							min_framerate = "4.2264"; // = 1 / max_exp_time
-							max_framerate = "60";
-							min_exp_time = "15"; // 4 line time (minimal 4 lines), in micro-second
-							max_exp_time = "236610"; // max exposure time = 65535-12 lines (defined in imx274.c), in micro-second
-							//embedded_metadata_height = "4";
-						};
-
+					min_gain_val = "1.0";
+					max_gain_val = "180";
+					min_hdr_ratio = "1";
+					max_hdr_ratio = "64";
+					min_framerate = "1.462526";
+					max_framerate = "60";
+					min_exp_time = "16.165";
+					max_exp_time = "165770";
+				};
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					port@0 {
 						reg = <0>;
-						imx274_out0: endpoint {
+						liimx274_imx274_out0: endpoint {
 							csi-port = <0>;
 							bus-width = <4>;
-							remote-endpoint = <&csi_in0>;
+							remote-endpoint = <&liimx274_csi_in0>;
 						};
 					};
 				};
@@ -310,7 +291,6 @@
 			/* Physical dimensions of sensor */
 			physical_w = "3.674";
 			physical_h = "2.738";
-
 			sensor_model = "imx274";
 			/* Define any required hw resources needed by driver */
 			/* ie. clocks, io pins, power sources */
@@ -406,81 +386,68 @@
 			* If sensor does not support embedded metadata value should be 0.
 			*/
 
-						mode0 { // IMX274_MODE_3840X2160
-							mclk_khz = "24000";
-							num_lanes = "4";
-							tegra_sinterface = "serial_c";
-							discontinuous_clk = "yes";
-							dpcm_enable = "false";
-							cil_settletime = "0";
+			mode0 {
+				mclk_khz = "24000";
+				num_lanes = "4";
+				tegra_sinterface = "serial_e";
+				discontinuous_clk = "yes";
+				dpcm_enable = "false";
+				cil_settletime = "0";
 
-							dynamic_pixel_bit_depth = "10";
-							csi_pixel_bit_depth = "10";
-							mode_type = "bayer";
-							pixel_phase = "rggb";
-							pixel_t = "bayer_rggb";
+				active_w = "1920";
+				active_h = "1080";
+				pixel_t = "bayer_rggb";
+				readout_orientation = "90";
+				line_length = "4200";
+				inherent_gain = "1";
+				mclk_multiplier = "25";
+				pix_clk_hz = "756000000";
 
-							active_w = "1920";
-							active_h = "1080";
-							readout_orientation = "0";
-							line_length = "2080"; // hmax (260) * 8
-							inherent_gain = "1";
-							mclk_multiplier = "25";  // pll * num_lanes
-							pix_clk_hz = "576000000"; // imx274 : 576000000 = 72Mhz * 8
+				min_gain_val = "1.0";
+				max_gain_val = "180";
+				min_hdr_ratio = "1";
+				max_hdr_ratio = "64";
+				min_framerate = "1.462526";
+				max_framerate = "60";
+				min_exp_time = "16.165";
+				max_exp_time = "165770";
+			};
 
-							min_gain_val = "1.0"; // defined in imx274.c
-							max_gain_val = "178"; // defined in imx274.c
-							min_hdr_ratio = "1";
-							max_hdr_ratio = "64";
-							min_framerate = "4.2264"; // = 1 / max_exp_time
-							max_framerate = "60";
-							min_exp_time = "15"; // 4 line time (minimal 4 lines), in micro-second
-							max_exp_time = "236610"; // max exposure time = 65535-12 lines (defined in imx274.c), in micro-second
-							//embedded_metadata_height = "4";
-						};
-						mode1 { // IMX274_MODE_1920X1080
-							mclk_khz = "24000";
-							num_lanes = "4";
-							tegra_sinterface = "serial_c";
-							discontinuous_clk = "yes";
-							dpcm_enable = "false";
-							cil_settletime = "0";
+			mode1 {
+				mclk_khz = "24000";
+				num_lanes = "4";
+				tegra_sinterface = "serial_e";
+				discontinuous_clk = "yes";
+				dpcm_enable = "false";
+				cil_settletime = "0";
 
-							dynamic_pixel_bit_depth = "10";
-							csi_pixel_bit_depth = "10";
-							mode_type = "bayer";
-							pixel_phase = "rggb";
-							pixel_t = "bayer_rggb";
+				active_w = "3840";
+				active_h = "2160";
+				pixel_t = "bayer_rggb";
+				readout_orientation = "90";
+				line_length = "4200";
+				inherent_gain = "1";
+				mclk_multiplier = "25";
+				pix_clk_hz = "756000000";
 
-							active_w = "3840";
-							active_h = "2160";
-							readout_orientation = "90";
-							line_length = "2080"; // hmax (260) * 8
-							inherent_gain = "1";
-							mclk_multiplier = "25";  // pll * num_lanes
-							pix_clk_hz = "576000000"; // imx274 : 576000000 = 72Mhz * 8
-
-							min_gain_val = "1.0"; // defined in imx274.c
-							max_gain_val = "178"; // defined in imx274.c
-							min_hdr_ratio = "1";
-							max_hdr_ratio = "64";
-							min_framerate = "4.2264"; // = 1 / max_exp_time
-							max_framerate = "60";
-							min_exp_time = "15"; // 4 line time (minimal 4 lines), in micro-second
-							max_exp_time = "236610"; // max exposure time = 65535-12 lines (defined in imx274.c), in micro-second
-							//embedded_metadata_height = "4";
-						};
-
+				min_gain_val = "1.0";
+				max_gain_val = "180";
+				min_hdr_ratio = "1";
+				max_hdr_ratio = "64";
+				min_framerate = "1.462526";
+				max_framerate = "60";
+				min_exp_time = "16.165";
+				max_exp_time = "165770";
+			};
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@0 {
 					reg = <0>;
-					imx274_out1: endpoint {
+					liimx274_imx274_out1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_in2>;
+						remote-endpoint = <&liimx274_csi_in1>;
 					};
 				};
 			};
@@ -527,13 +494,13 @@
 		* isp_bw_margin_pct = <>;
 		* Isp bandwidth margin in percentage
 		*/
-		num_csi_lanes = <4>;
+		num_csi_lanes = <8>;
 		max_lane_speed = <1500000>;
 		min_bits_per_pixel = <10>;
 		vi_peak_byte_per_pixel = <2>;
 		vi_bw_margin_pct = <25>;
 		max_pixel_rate = <750000>;
-		isp_peak_byte_per_pixel = <2>;
+		isp_peak_byte_per_pixel = <5>;
 		isp_bw_margin_pct = <25>;
 
 		/**

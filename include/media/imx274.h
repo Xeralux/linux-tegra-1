@@ -17,80 +17,56 @@
 #ifndef __IMX274_H__
 #define __IMX274_H__
 
+#include <linux/ioctl.h>  /* For IOCTL macros */
 #include <media/nvc.h>
 #include <media/nvc_image.h>
 
-#define IMX274_IOCTL_SET_MODE               _IOW('o', 1, struct imx274_mode)
-#define IMX274_IOCTL_SET_FRAME_LENGTH       _IOW('o', 2, __u32)
-#define IMX274_IOCTL_SET_COARSE_TIME        _IOW('o', 3, __u32)
-#define IMX274_IOCTL_SET_GAIN               _IOW('o', 4, __u16)
-#define IMX274_IOCTL_GET_STATUS             _IOR('o', 5, __u8)
-#define IMX274_IOCTL_SET_BINNING            _IOW('o', 6, __u8)
-#define IMX274_IOCTL_TEST_PATTERN           _IOW('o', 7, \
-						 enum imx274_test_pattern)
-#define IMX274_IOCTL_SET_GROUP_HOLD         _IOW('o', 8, struct imx274_ae)
-/* IOCTL to set the operating mode of camera.
- * This can be either stereo , leftOnly or rightOnly */
-#define IMX274_IOCTL_SET_CAMERA_MODE        _IOW('o', 10, __u32)
-#define IMX274_IOCTL_SYNC_SENSORS           _IOW('o', 11, __u32)
-#define IMX274_IOCTL_GET_FUSEID             _IOR('o', 12, struct nvc_fuseid)
-#define IMX274_IOCTL_SET_HDR_COARSE_TIME    _IOW('o', 13, struct imx274_hdr)
-#define IMX274_IOCTL_READ_OTP_BANK          _IOWR('o', 14, \
-						struct imx274_otp_bank)
-#define IMX274_IOCTL_SET_CAL_DATA           _IOW('o', 15, \
-						struct imx274_cal_data)
-#define IMX274_IOCTL_GET_EEPROM_DATA        _IOR('o', 20, __u8 *)
-#define IMX274_IOCTL_SET_EEPROM_DATA        _IOW('o', 21, __u8 *)
-#define IMX274_IOCTL_GET_CAPS               _IOR('o', 22, struct nvc_imager_cap)
-#define IMX274_IOCTL_SET_POWER              _IOW('o', 23, __u32)
+#define IMX274_IOCTL_SET_MODE			_IOW('o', 1, struct imx274_mode)
+#define IMX274_IOCTL_GET_STATUS		_IOR('o', 2, __u8)
+#define IMX274_IOCTL_SET_FRAME_LENGTH		_IOW('o', 3, __u32)
+#define IMX274_IOCTL_SET_COARSE_TIME		_IOW('o', 4, __u32)
+#define IMX274_IOCTL_SET_GAIN			_IOW('o', 5, __u16)
+#define IMX274_IOCTL_GET_SENSORDATA		_IOR('o', 6, \
+	 struct imx274_sensordata)
+#define IMX274_IOCTL_SET_GROUP_HOLD		_IOW('o', 7, struct imx274_ae)
+#define IMX274_IOCTL_SET_HDR_COARSE_TIME	_IOW('o', 8, struct imx274_hdr)
+#define IMX274_IOCTL_SET_POWER			_IOW('o', 20, __u32)
 
-#define IMX274_INVALID_COARSE_TIME  -1
+#define IMX274_SVR_ADDR					0x300E
 
-#define IMX274_EEPROM_ADDRESS		0x50
-#define IMX274_EEPROM_SIZE		1024
-#define IMX274_EEPROM_STR_SIZE		(IMX274_EEPROM_SIZE * 2)
-#define IMX274_EEPROM_BLOCK_SIZE	(1 << 8)
-#define IMX274_EEPROM_NUM_BLOCKS \
-	(IMX274_EEPROM_SIZE / IMX274_EEPROM_BLOCK_SIZE)
+#define IMX274_SHR_ADDR_LSB				0x300C
+#define IMX274_SHR_ADDR_MSB				0x300D
 
-#define IMX274_OTP_LOAD_CTRL_ADDR	0x3D81
-#define IMX274_OTP_BANK_SELECT_ADDR	0x3D84
-#define IMX274_OTP_BANK_START_ADDR	0x3D00
-#define IMX274_OTP_BANK_END_ADDR	0x3D0F
-#define IMX274_OTP_NUM_BANKS		(32)
-#define IMX274_OTP_BANK_SIZE \
-	 (IMX274_OTP_BANK_END_ADDR - IMX274_OTP_BANK_START_ADDR + 1)
-#define IMX274_OTP_SIZE \
-	 (IMX274_OTP_BANK_SIZE * IMX274_OTP_NUM_BANKS)
-#define IMX274_OTP_STR_SIZE (IMX274_OTP_SIZE * 2)
+#define IMX274_VMAX_ADDR_LSB			0x30F8
+#define IMX274_VMAX_ADDR_MSB			0x30F9
 
-#define IMX274_FUSE_ID_OTP_START_ADDR	0x3D00
-#define IMX274_FUSE_ID_OTP_BANK	0
-#define IMX274_FUSE_ID_SIZE		8
-#define IMX274_FUSE_ID_STR_SIZE	(IMX274_FUSE_ID_SIZE * 2)
+#define IMX274_GAIN_ADDR_LSB			0x300A
+#define IMX274_GAIN_ADDR_MSB			0x300B
 
-#define IMX274_FRAME_LENGTH_ADDR_1			0x30FA // VMAX, MSB
-#define IMX274_FRAME_LENGTH_ADDR_2			0x30F9 // VMAX ,
-#define IMX274_FRAME_LENGTH_ADDR_3			0x30F8 // VMAX , LSB
-#define IMX274_SVR_REG_MSB					0x300F // SVR
-#define IMX274_SVR_REG_LSB					0x300E // SVR
-#define IMX274_COARSE_TIME_ADDR_MSB		0x300D // SHR
-#define IMX274_COARSE_TIME_ADDR_LSB			0x300C // SHR
-#define IMX274_GROUP_HOLD_ADDR				0x302D
-#define IMX274_ANALOG_GAIN_ADDR_LSB 		0x300A
-#define IMX274_ANALOG_GAIN_ADDR_MSB		0x300B
+#define IMX274_GROUP_HOLD_ADDR			0x302D
 
-#define IMX274_STANDBY_REG				0x3000
+#define IMX274_PIXEL_CLK_HZ				756000000
+#define IMX274_LINE_LENGTH				4200
+
+#define IMX274_VMAX						4550
+#define IMX274_HMAX						263
+#define IMX274_MODE1_OFFSET				112
+#define IMX274_MODE1_SHR_MIN			12
+#define IMX274_ET_FACTOR				400
 
 struct imx274_mode {
-	int res_x;
-	int res_y;
-	int fps;
+	__u32 xres;
+	__u32 yres;
 	__u32 frame_length;
 	__u32 coarse_time;
 	__u32 coarse_time_short;
 	__u16 gain;
 	__u8 hdr_en;
+};
+
+struct imx274_hdr {
+	__u32 coarse_time_long;
+	__u32 coarse_time_short;
 };
 
 struct imx274_ae {
@@ -103,71 +79,29 @@ struct imx274_ae {
 	__u8  gain_enable;
 };
 
-struct imx274_fuseid {
-	__u32 size;
-	__u8  id[16];
-};
-
-struct imx274_hdr {
-	__u32 coarse_time_long;
-	__u32 coarse_time_short;
-};
-
-struct imx274_otp_bank {
-	__u32 id;
-	__u8  buf[16];
-};
-
-struct imx274_cal_data {
-	int loaded;
-	int rg_ratio;
-	int bg_ratio;
-	int rg_ratio_typical;
-	int bg_ratio_typical;
-	__u8 lenc[62];
-};
-
-/* See notes in the nvc.h file on the GPIO usage */
-enum imx274_gpio_type {
-	IMX274_GPIO_TYPE_PWRDN = 0,
-	IMX274_GPIO_TYPE_RESET,
-};
-
-struct imx274_eeprom_data {
-	struct i2c_client *i2c_client;
-	struct i2c_adapter *adap;
-	struct i2c_board_info brd;
-	struct regmap *regmap;
-};
-
+#ifdef __KERNEL__
 struct imx274_power_rail {
 	struct regulator *dvdd;
 	struct regulator *avdd;
-	struct regulator *dovdd;
-};
-
-struct imx274_regulators {
-	const char *avdd;
-	const char *dvdd;
-	const char *dovdd;
+	struct regulator *iovdd;
+	struct regulator *ext_reg1;
+	struct regulator *ext_reg2;
+	struct clk *mclk;
+	unsigned int pwdn_gpio;
+	unsigned int cam1_gpio;
+	unsigned int reset_gpio;
+	unsigned int af_gpio;
 };
 
 struct imx274_platform_data {
-	unsigned cfg;
-	unsigned num;
-	const char *dev_name;
-	unsigned gpio_count; /* see nvc.h GPIO notes */
-	struct nvc_gpio_pdata *gpio; /* see nvc.h GPIO notes */
-	struct nvc_imager_static_nvc *static_info;
-	bool use_vcm_vdd;
-	int (*probe_clock)(unsigned long);
-	int (*power_on)(struct imx274_power_rail *);
-	int (*power_off)(struct imx274_power_rail *);
-	const char *mclk_name;
-	struct nvc_imager_cap *cap;
-	struct imx274_regulators regulators;
-	bool has_eeprom;
-	bool use_cam_gpio;
+	const char *mclk_name; /* NULL for default default_mclk */
+	unsigned int cam1_gpio;
+	unsigned int reset_gpio;
+	unsigned int af_gpio;
+	bool ext_reg;
+	int (*power_on)(struct imx274_power_rail *pw);
+	int (*power_off)(struct imx274_power_rail *pw);
 };
+#endif /* __KERNEL__ */
 
 #endif  /* __IMX274_H__ */
