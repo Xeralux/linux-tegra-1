@@ -38,7 +38,7 @@
 				port@1 {
 					reg = <1>;
 					liimx274_vi_in1: endpoint {
-						csi-port = <1>;
+						csi-port = <2>;
 						bus-width = <4>;
 						remote-endpoint = <&liimx274_csi_out1>;
 					};
@@ -121,7 +121,7 @@
 				/* crop co-ordinates */
 				post_crop_frame_drop = "0";
 				/* if true, delay gain setting by one frame to be in sync with exposure */
-				delayed_gain = "true";
+				/* delayed_gain = "true"; */
 
 				/**
 				* A modeX node is required to support v4l2 driver
@@ -226,7 +226,7 @@
 					pix_clk_hz = "756000000";
 
 					min_gain_val = "1.0";
-					max_gain_val = "22.2";
+					max_gain_val = "180";
 					min_hdr_ratio = "1";
 					max_hdr_ratio = "64";
 					min_framerate = "1.462526";
@@ -389,7 +389,7 @@
 			mode0 {
 				mclk_khz = "24000";
 				num_lanes = "4";
-				tegra_sinterface = "serial_e";
+				tegra_sinterface = "serial_c";
 				discontinuous_clk = "yes";
 				dpcm_enable = "false";
 				cil_settletime = "0";
@@ -416,7 +416,7 @@
 			mode1 {
 				mclk_khz = "24000";
 				num_lanes = "4";
-				tegra_sinterface = "serial_e";
+				tegra_sinterface = "serial_c";
 				discontinuous_clk = "yes";
 				dpcm_enable = "false";
 				cil_settletime = "0";

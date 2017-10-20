@@ -656,8 +656,8 @@ static imx274_reg mode_1280X540[] = {
 };
 
 enum {
-	IMX274_MODE_3840X2160,
 	IMX274_MODE_1920X1080,
+	IMX274_MODE_3840X2160,
 	IMX274_MODE_1280X720,
 	IMX274_MODE_1280X540,
 	IMX274_MODE_START_STREAM,
@@ -666,8 +666,8 @@ enum {
 };
 
 static const imx274_reg *mode_table[] = {
-	[IMX274_MODE_3840X2160] = mode_3840X2160_60fps,
 	[IMX274_MODE_1920X1080] = imx274_mode3_1920x1080_raw10,
+	[IMX274_MODE_3840X2160] = mode_3840X2160_60fps,
 	[IMX274_MODE_1280X720] = mode_1280X720,
 	[IMX274_MODE_1280X540] = mode_1280X540,
 
@@ -689,8 +689,8 @@ static const int imx274_240_fr[] = {
 };
 
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
-	{{3840, 2160}, imx274_60_fr, 1, 0, IMX274_MODE_3840X2160},
 	{{1920, 1080}, imx274_60_fr, 1, 0, IMX274_MODE_1920X1080},
+	{{3840, 2160}, imx274_60_fr, 1, 0, IMX274_MODE_3840X2160},
 //	{{1280, 720},  imx274_60_fr, 1, 0, IMX274_MODE_1280X720},
 //	{{1280, 540},  imx274_240_fr, 1, 0, IMX274_MODE_1280X540},
 };
