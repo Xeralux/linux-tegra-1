@@ -61,17 +61,17 @@
 					csi_chan0_port0: port@0 {
 						reg = <0>;
 						status = "okay";
-						csi_in0: endpoint@0 {
-							csi-port = <0>;
+						liimx274_csi_in1: endpoint@0 {
+							csi-port = <2>;
 							bus-width = <4>;
-							remote-endpoint = <&imx274_out0>;
+							remote-endpoint = <&liimx274_imx274_out1>;
 						};
 					};
 					port@1 {
 						reg = <1>;
 						status = "okay";
-						csi_out0: endpoint@1 {
-							remote-endpoint = <&vi_in0>;
+						liimx274_csi_out1: endpoint@1 {
+							remote-endpoint = <&liimx274_vi_in1>;
 						};
 					};
 				};
@@ -85,17 +85,17 @@
 					csi_chan2_port0: port@0 {
 						reg = <0>;
 						status = "okay";
-						csi_in2: endpoint@2 {
-							csi-port = <2>;
+						liimx274_csi_in0: endpoint@0 {
+							csi-port = <0>;
 							bus-width = <4>;
-							remote-endpoint = <&imx274_out1>;
+							remote-endpoint = <&liimx274_imx274_out0>;
 						};
 					};
 					port@1 {
 						reg = <1>;
 						status = "okay";
-						csi_out2: endpoint@3 {
-							remote-endpoint = <&vi_in1>;
+						liimx274_csi_out0: endpoint@1 {
+							remote-endpoint = <&liimx274_vi_in0>;
 						};
 					};
 				};
@@ -574,26 +574,6 @@
 		 */
 		modules {
 			module0 {
-				badge = "imx274_bottomleft_A6V24";
-				position = "bottomleft";
-				orientation = "1";
-				status = "okay";
-				drivernode0 {
-					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_sensor";
-					/* Driver's v4l2 device name */
-					devname = "imx274 6-001a";
-					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/imx274_a@1a";
-					status = "okay";
-				};
-				drivernode1 {
-					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_lens";
-					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
-				};
-			};
-			module1 {
 				badge = "imx274_bottomright_A6V24";
 				position = "bottomright";
 				orientation = "1";
@@ -605,6 +585,26 @@
 					devname = "imx274 2-001a";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@7000c500/imx274_c@1a";
+					status = "okay";
+				};
+				drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
+				};
+			};
+			module1 {
+				badge = "imx274_bottomleft_A6V24";
+				position = "bottomleft";
+				orientation = "1";
+				status = "okay";
+				drivernode0 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_sensor";
+					/* Driver's v4l2 device name */
+					devname = "imx274 6-001a";
+					/* Declare the device-tree hierarchy to driver instance */
+					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/imx274_a@1a";
 					status = "okay";
 				};
 				drivernode1 {
