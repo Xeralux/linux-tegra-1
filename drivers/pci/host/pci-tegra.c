@@ -1193,7 +1193,7 @@ static void work_hotplug_handler(struct work_struct *work)
 	if (pcie_driver->plat_data->gpio_hot_plug == -1)
 		return;
 	val = gpio_get_value(pcie_driver->plat_data->gpio_hot_plug);
-	if (val == 0) {
+	if (val) {
 		dev_info(pcie_driver->dev, "PCIE Hotplug: Connected\n");
 		tegra_pcie_attach(pcie_driver);
 	} else {
