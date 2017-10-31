@@ -148,6 +148,7 @@
 
 	pcie-controller@1003000 {
 		nvidia,wake-gpio = <&gpio TEGRA_GPIO(A, 2) 0>;
+		nvidia,hot-plug-gpio = <&gpio TEGRA_GPIO(I, 1) GPIO_ACTIVE_HIGH>;
 		dvdd-pex-pll-supply = <&max77620_ldo1>;
 		l0-dvddio-pex-supply = <&max77620_ldo1>;
 		l1-dvddio-pex-supply = <&max77620_ldo1>;
