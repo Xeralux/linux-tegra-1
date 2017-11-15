@@ -198,7 +198,9 @@ inline static int eutecus_remap(struct vm_area_struct * vma, resource_size_t sta
     if (start & (PAGE_SIZE-1)) {
         return -EINVAL; // not page-aligned
     }
-    return remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
+
+    vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+    return io_remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 }
 
 int init_cfile(struct eutecus_pci_data * data, struct pci_dev * dev);
