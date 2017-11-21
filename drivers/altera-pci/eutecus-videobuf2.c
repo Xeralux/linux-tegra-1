@@ -34,8 +34,8 @@ int eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t
 
     buf->next_offset = 0;
     buf->next_serial = 0;
-    memset(buf->offset, 0, sizeof(buf->offset));
-    memset(&buf->stream, 0, sizeof(buf->stream));
+    memset_io(buf->offset, 0, sizeof(buf->offset));
+    memset_io(&buf->stream, 0, sizeof(buf->stream));
     buf->tegra.pci = NULL;
     // Set up the physical address:
     buf->tegra.kernel_address = phys_start;
@@ -55,7 +55,7 @@ static struct eutecus_v4l2_frame * eutecus_init_v4l2_frame_by_index(struct eutec
     /* Get the next buffer: */
     frame = eutecus_get_v4l2_frame_by_index(buf, buf->indices_used);
 
-    memset(frame, 0, sizeof(*frame));   // Clears only the header
+    memset_io(frame, 0, sizeof(*frame));   // Clears only the header
     frame->header.full_size = eutecus_v4l2_buffer_size(size);
     frame->header.frame_size = size;
     frame->header.tegra.kernel_address = eutecus_get_v4l2_physical_by_index(buf, buf->indices_used);
