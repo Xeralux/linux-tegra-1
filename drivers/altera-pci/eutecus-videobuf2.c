@@ -74,7 +74,7 @@ static struct eutecus_v4l2_frame * eutecus_init_v4l2_frame_by_index(struct eutec
 }
 
 /// Allocate a new V4l2 buffer
-static void * videoout_dc_alloc(void * alloc_ctx, unsigned long size, gfp_t gfp_flags)
+static void * videoout_dc_alloc(void * alloc_ctx, unsigned long size, enum dma_data_direction dma_dir, gfp_t gfp_flags)
 {
     struct videoout_dc_conf * conf = alloc_ctx;
     struct device * dev = conf->dev;

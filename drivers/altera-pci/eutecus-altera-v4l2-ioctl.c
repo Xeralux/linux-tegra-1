@@ -73,6 +73,7 @@ static struct video_data_format formats[] = {
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
 {
     struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
+    (void)dev;
 
     ENTER();
 
@@ -118,6 +119,7 @@ static int vid_reqbufs(struct file * file, void * fh, struct v4l2_requestbuffers
 {
     int rs;
     struct video_device * vdev = video_devdata(file);
+    (void)vdev;
 
     ENTER();
     DEBUG(generic, "file=%p, priv=%p, buf=%p \n", file, fh, b);
@@ -242,6 +244,7 @@ static int videoout_g_std(struct file * file, void * priv, v4l2_std_id * std)
 static int videoout_enum_output(struct file * file, void * fh, struct v4l2_output * out)
 {
     struct videoout_dev * dev = video_drvdata(file);
+    (void)dev;
 
     ENTER();
 
@@ -260,6 +263,7 @@ static int videoout_enum_output(struct file * file, void * fh, struct v4l2_outpu
 static int videoout_g_output(struct file * file, void * fh, unsigned int * i)
 {
     struct videoout_dev * dev = video_drvdata(file);
+    (void)dev;
 
     ENTER();
 
@@ -272,6 +276,7 @@ static int videoout_g_output(struct file * file, void * fh, unsigned int * i)
 static int videoout_s_output(struct file * file, void * fh, unsigned int i)
 {
     struct videoout_dev * dev = video_drvdata(file);
+    (void)dev;
 
     ENTER();
 
@@ -289,7 +294,8 @@ static int videoout_enum_frameintervals(struct file * file, void * priv, struct 
     struct videoout_dev * dev = video_drvdata(file);
     struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
     struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
-    struct frame_interval * fi;
+    const struct frame_interval * fi;
+    (void)buf;
 
     ENTER();
 
@@ -547,7 +553,8 @@ static int videoout_g_fmt_video_output(struct file * file, void * fh, struct v4l
 {
     struct v4l2_pix_format_mplane * pf = &f->fmt.pix_mp;
     struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
-    struct video_data_format * fmt = dev->fmt;
+    const struct video_data_format * fmt = dev->fmt;
+    (void)pf;
 
     ENTER();
 
