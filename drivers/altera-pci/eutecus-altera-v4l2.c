@@ -329,7 +329,7 @@ static int altera_v4l2_queue_init(struct vb2_queue * q, struct pci_dev * dev)
 
     videoout_dc_init(&videoout_memops);
 
-    q->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE; // will be updated later
+    q->type = V4L2_BUF_TYPE_VIDEO_OUTPUT; // will be updated later
     q->io_modes = VB2_MMAP; // We must use our HW address for buffers
     q->drv_priv = dev;
     q->buf_struct_size = sizeof(struct videoout_buffer);
