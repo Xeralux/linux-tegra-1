@@ -70,7 +70,6 @@ static struct video_data_format formats[] = {
     }
 };
 
-
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
 {
     ENTER();
