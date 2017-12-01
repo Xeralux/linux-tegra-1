@@ -42,9 +42,10 @@ static inline void update_input_speed(struct eutecus_v4l2_buffers * buf)
 
 static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct videoout_buffer * vob)
 {
-    struct vb2_buffer * vb = &vob->vb;
+    struct vb2_buffer * vb = &vob->vb.vb2_buf;
     struct eutecus_v4l2_frame * frame;
-    int i, buffer_in_queue;
+    int i;
+    int buffer_in_queue;
     u32 serial = ++buf->next_serial;
 
     ENTER();
@@ -81,7 +82,7 @@ static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct vid
         case FRAME_USER:
             {
                 struct eutecus_v4l2_header * h = &frame->header;
-                const struct v4l2_buffer * b = &vob->vb.v4l2_buf;
+                const struct vb2_v4l2_buffer * b = &vob->vb;
                 // Copy some v4l2 information:
                 h->seconds      = b->timestamp.tv_sec;
                 h->microseconds = b->timestamp.tv_usec;
