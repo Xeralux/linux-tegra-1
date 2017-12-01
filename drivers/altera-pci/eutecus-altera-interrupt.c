@@ -30,25 +30,24 @@ static int videoout_interrupt_from_analitics(struct eutecus_pci_data * data)
             return 0;
         }
 
-        DEBUG(video, "frame #%u is %s at %p\n", frame->header.serial, get_frame_state_name(frame), frame);
         switch (frame->header.state) {
             case FRAME_FREE:
-            case FRAME_PROCESSED:
+            case FRAME_CONVERTED:
                 if (frame->header.tegra.vob) {
                     struct videoout_buffer * vob = (struct videoout_buffer *)frame->header.tegra.vob;
                     if (!vob->queued) {
                         /* According to my measurements, such a call needs 18 microsecs time. If it is too
                          * much, it can be moved into a thread instead of calling it directly. */
                         videoout_buffer_done(vob, VB2_BUF_STATE_DONE);
-                        DEBUG(video, "frame #%u is DONE (%s -> ready) at %p\n", frame->header.serial, get_frame_state_name(frame), frame);
+                        DEBUG(video, "frame #%u is DONE (%s -> user) at %p\n", frame->header.serial, get_shared_frame_state_name(frame), frame);
                     } else {
-                        DEBUG(video, "frame #%u has already been queued (%s -> ready) at %p\n", frame->header.serial, get_frame_state_name(frame), frame);
+                        DEBUG(video, "frame #%u has already been queued (%s -> user) at %p\n", frame->header.serial, get_shared_frame_state_name(frame), frame);
                     }
                 } else {
-                    DEBUG(video, "frame #%u first time (%s -> ready) at %p\n", frame->header.serial, get_frame_state_name(frame), frame);
+                    DEBUG(video, "frame #%u first time (%s -> user) at %p\n", frame->header.serial, get_shared_frame_state_name(frame), frame);
                 }
 
-                frame->header.state = FRAME_READY;
+                frame->header.state = FRAME_USER;
             break;
 
             default:
