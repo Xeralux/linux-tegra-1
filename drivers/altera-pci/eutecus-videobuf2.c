@@ -34,6 +34,9 @@ int eutecus_init_v4l2_buffers(struct eutecus_v4l2_buffers * buf, resource_size_t
 
     buf->next_offset = 0;
     buf->next_serial = 0;
+    buf->frames_dropped_by_tegra = 0;
+    buf->number_of_input_frames = 0;
+    buf->input_fps = 0;
     memset_io(buf->offset, 0, sizeof(buf->offset));
     memset_io(&buf->stream, 0, sizeof(buf->stream));
     buf->tegra.pci = NULL;
