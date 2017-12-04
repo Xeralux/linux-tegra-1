@@ -208,7 +208,7 @@ int init_cfile(struct eutecus_pci_data * data, struct pci_dev * dev)
                             break;
                         }
 
-                        DEBUG(level, "added device %d/%d\n", MAJOR(data->number), MINOR(data->number));
+                        DEBUG(files, "added device %d/%d\n", MAJOR(data->number), MINOR(data->number));
 
                         LEAVE();
 /* ------------- */     return 0;       /* Success  --------------------------------------------------- */
