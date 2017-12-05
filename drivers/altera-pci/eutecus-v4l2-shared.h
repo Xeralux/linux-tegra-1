@@ -10,7 +10,8 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#pragma once
+#ifndef __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_SHARED_H_INCLUDED__
+#define __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_SHARED_H_INCLUDED__
 
 #include <linux/types.h>
 #include <linux/time.h>
@@ -240,5 +241,7 @@ inline static struct eutecus_v4l2_frame * eutecus_get_v4l2_frame_by_index(struct
 {
     return buf->frames[buf->offset[index]].frame;
 }
+
+#endif /* __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_SHARED_H_INCLUDED__ */
 
 /* * * * * * * * * * * * * End - of - File * * * * * * * * * * * * * * */
