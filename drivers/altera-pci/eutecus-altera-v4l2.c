@@ -11,18 +11,75 @@
 #include "eutecus-altera-pci.h"
 #include "eutecus-altera-v4l2-ioctl.h"
 
+/// Calculates time difference
+/*! \retval elapsed The time in microseconds. If no start time is set, returns zero. */
+static inline u32 get_elapsed_time(const struct timeval * start, const struct timeval * end)
+{
+    if (!start->tv_sec) {
+        return 0ULL;
+    }
+
+    return end->tv_usec - start->tv_usec + 1000000U * (end->tv_sec - start->tv_sec);
+}
+
+static inline void update_input_speed(struct eutecus_v4l2_buffers * buf)
+{
+    static struct timeval previous_frame_time;
+    struct timeval now;
+    u32 elapsed;
+
+    do_gettimeofday(&now);
+    elapsed = get_elapsed_time(&previous_frame_time, &now);
+
+    previous_frame_time = now;
+
+    if (!elapsed) {
+        return;
+    }
+
+    buf->input_fps = 1000000000 / (s32)elapsed;
+}
+
 static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct videoout_buffer * vob)
 {
     struct vb2_buffer * vb = &vob->vb.vb2_buf;
-    struct eutecus_v4l2_frame * frame = container_of(vb2_plane_vaddr(vb, 0), struct eutecus_v4l2_frame, payload);
+    struct eutecus_v4l2_frame * frame;
+    int i;
+    int buffer_in_queue;
     u32 serial = ++buf->next_serial;
 
     ENTER();
 
+    update_input_speed(buf);
+
+    for (i = 0, buffer_in_queue = 0; i < buf->indices_used; ++i) {
+        frame = eutecus_get_v4l2_frame_by_index(buf, i);
+        if(FRAME_TO_CONVERT == frame->header.state){
+            ++buffer_in_queue;
+        }
+    }
+
+    frame = container_of(vb2_plane_vaddr(vb, 0), struct eutecus_v4l2_frame, payload);
+
     frame->header.serial = serial;
 
+    if(buffer_in_queue){
+        videoout_buffer_done(vob, VB2_BUF_STATE_DONE);
+        frame->header.tegra.vob = (u64)vob;
+        ++buf->number_of_input_frames;
+        ++buf->frames_dropped_by_tegra;
+        if(FRAME_USER != frame->header.state){
+            ERROR("The frame state is not USER (%s)!\n", get_shared_frame_state_name(frame));
+            LEAVE();
+            return;
+        }
+        DEBUG(video, "Got frame, but frame is already queued for the color converter on the socfpga side, pass back to v4l2 system\n");
+        LEAVE();
+        return;
+    }
+
     switch (frame->header.state) {
-        case FRAME_READY:
+        case FRAME_USER:
             {
                 struct eutecus_v4l2_header * h = &frame->header;
                 const struct vb2_v4l2_buffer * b = &vob->vb;
@@ -37,16 +94,16 @@ static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct vid
             }
             // Setup the buffer state:
             frame->header.tegra.vob = (u64)vob;
-            frame->header.state = FRAME_BUSY;
-            // Ready:
-            interrupt_request_2_RS4(buf->tegra.pci);    /* Send an interrupt to the analytics: the frame is to be processed */
-            DEBUG(video, "Got frame #%u (state: ready -> busy) at %p (IRQ)\n", serial, frame);
+            frame->header.state = FRAME_TO_CONVERT;
+            ++buf->number_of_input_frames;
+            interrupt_request_2_RS4(buf->tegra.pci);    /* Send an interrupt to the analytics: the frame is ready to be converted */
+            DEBUG(video, "Got frame #%u (state: user -> to_convert) at %p (IRQ)\n", serial, frame);
         break;
 
         default:
             frame->header.tegra.vob = 0UL;
             videoout_buffer_done(vob, VB2_BUF_STATE_DONE);
-            DEBUG(video, "frame #%u dropped (state: %s) at %p\n", serial, get_frame_state_name(frame), frame);
+            DEBUG(video, "frame #%u dropped (state: %s) at %p\n", serial, get_shared_frame_state_name(frame), frame);
         break;
     }
 

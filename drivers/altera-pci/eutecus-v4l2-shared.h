@@ -35,26 +35,21 @@ enum eutecus_v4l2_frame_state {
     /*! The CycloneV has accepted a \ref FRAME_INITIAL frame */
     FRAME_FREE,
 
-    /// Frame is ready
-    /*! The Tegra is ready to put a new image in this buffer */
-    FRAME_READY,
+    /// Frame is available for V4L2
+    /*! internal state change by Tegra: the buffer is made available for the V4L2 system, at startup or the buffer back from SoCFPGA */
+    FRAME_USER,
 
     /// There is a new frame in the buffer
-    /*! It means that there is an image in this buffer (put by Tegra) and can be processed by
-        the analytics (CycloneV). */
-    FRAME_BUSY,
+    /*! It means that there is an image in this buffer (put by Tegra) and can be processed by the socfpga */
+    FRAME_TO_CONVERT,
 
-    /// Frame is being processed by CycloneV
-    /*! The V4L2 system of CycloneV is working on this frame */
-    FRAME_PROCESSING,
-
-    /// Frame has been processed
-    /*! It means that the analytics on the Cyclone side has processed the image. */
-    FRAME_PROCESSED,
-
-    /// Frame is being converting by the YCC converter
-    /* It means that the YCC converter on the Cyclone side converting the image from i420 to uyvy. */
+    /// Frame is being processed by color converter
+    /*! The SocFPGA has accepted the buffer and the color converter started to work on the frame */
     FRAME_CONVERTING,
+
+    /// Frame is processed by color converter
+    /*! The SocFPGA has accepted the buffer and the color converter started to work on the frame */
+    FRAME_CONVERTED,
 
     /// Last entry, just for size check
     _FRAME_STATE_SIZE
@@ -81,7 +76,7 @@ struct eutecus_v4l2_header {
     struct {
         /// Kernel physical address of the payload
         /*! \note   It is necessary for memory mapping. */
-        u32 kernel_address;
+        u32 dma_address;
 
         /// Pointer to corresponding vb2_buffer
         u32 vob;
@@ -145,10 +140,10 @@ struct eutecus_v4l2_frame {
 } PACKED;
 
 /// Readable names for \ref eutecus_v4l2_frame_state values
-#define FRAME_NAMES { "initial", "free", "ready", "busy", "processing", "processed", "converting" }
+#define FRAME_NAMES { "initial", "free", "user", "to_convert", "converting", "converted" }
 
 /// Return readable name of the frame state
-static inline const char * get_frame_state_name(const struct eutecus_v4l2_frame * f)
+static inline const char * get_shared_frame_state_name(const struct eutecus_v4l2_frame * f)
 {
     u32 state = f->header.state;
     static char * names[] = FRAME_NAMES;
@@ -179,7 +174,14 @@ struct eutecus_v4l2_buffers {
                         debug messages, but the V4l2 system has its own serial number. */
             u32 next_serial;
 
-            u32 dummy;          ///< Just for 64-bit alignment
+            /// Frames dropped by the tegra because the color converter is too slow
+            u32 frames_dropped_by_tegra;
+
+            /// Frames received on the Tegra side
+            u32 number_of_input_frames;
+
+            /// Input framerate
+            s32 input_fps;
 
             /// Offsets of frames within this structure
             /*! The array \ref frames[] can be accessed by these values to get frame structures (see \ref eutecus_v4l2_frame). */
@@ -190,11 +192,9 @@ struct eutecus_v4l2_buffers {
                 u32 width;              ///< Frame Width of the current stream
                 u32 height;             ///< Frame Height of the current stream
                 u32 fourcc;             ///< Pixel Format of the current stream
-                u32 covnerted_fourcc;   ///< Pixel format of the converted stream (I420->uyvy)
                 u32 numerator;          ///< FPS numerator
                 u32 denominator;        ///< FPS denominator
                 u32 active;             ///< Nonzero if the stream is running
-                u32 dummy;              ///< Just for 64-bit alignment
 
             } PACKED stream;
 
@@ -207,16 +207,6 @@ struct eutecus_v4l2_buffers {
 
                 /// It is used for dc buffer initialization
                 u32 frame_index;
-
-                u32 active;
-
-                /// Virtual address of the converted buffers
-                u32 converted_buffers_virt;
-
-                /// Physical address of the converted buffers
-                u32 converted_buffers_phys;
-
-                u32 _padding;
 
             } PACKED cycv;
 

@@ -72,9 +72,6 @@ static struct video_data_format formats[] = {
 
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
 {
-    struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
-    (void)dev;
-
     ENTER();
 
     memset(cap, 0, sizeof(*cap));
@@ -118,8 +115,6 @@ static int vid_prepare_buf(struct file * file, void * fh, struct v4l2_buffer * b
 static int vid_reqbufs(struct file * file, void * fh, struct v4l2_requestbuffers * b)
 {
     int rs;
-    struct video_device * vdev = video_devdata(file);
-    (void)vdev;
 
     ENTER();
     DEBUG(generic, "file=%p, priv=%p, buf=%p \n", file, fh, b);
@@ -243,9 +238,6 @@ static int videoout_g_std(struct file * file, void * priv, v4l2_std_id * std)
 
 static int videoout_enum_output(struct file * file, void * fh, struct v4l2_output * out)
 {
-    struct videoout_dev * dev = video_drvdata(file);
-    (void)dev;
-
     ENTER();
 
     if (out->index > 0) {
@@ -262,9 +254,6 @@ static int videoout_enum_output(struct file * file, void * fh, struct v4l2_outpu
 
 static int videoout_g_output(struct file * file, void * fh, unsigned int * i)
 {
-    struct videoout_dev * dev = video_drvdata(file);
-    (void)dev;
-
     ENTER();
 
     *i = 0; // output index
@@ -275,9 +264,6 @@ static int videoout_g_output(struct file * file, void * fh, unsigned int * i)
 
 static int videoout_s_output(struct file * file, void * fh, unsigned int i)
 {
-    struct videoout_dev * dev = video_drvdata(file);
-    (void)dev;
-
     ENTER();
 
     if (i) {
@@ -292,10 +278,7 @@ static int videoout_s_output(struct file * file, void * fh, unsigned int i)
 static int videoout_enum_frameintervals(struct file * file, void * priv, struct v4l2_frmivalenum * fval)
 {
     struct videoout_dev * dev = video_drvdata(file);
-    struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
-    struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
     const struct frame_interval * fi;
-    (void)buf;
 
     ENTER();
 
@@ -551,10 +534,8 @@ static int videoout_try_fmt_video_output(struct file * file, void * fh, struct v
 
 static int videoout_g_fmt_video_output(struct file * file, void * fh, struct v4l2_format * f)
 {
-    struct v4l2_pix_format_mplane * pf = &f->fmt.pix_mp;
     struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
     const struct video_data_format * fmt = dev->fmt;
-    (void)pf;
 
     ENTER();
 
