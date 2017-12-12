@@ -76,7 +76,6 @@ static int register_owner(struct device * dev, struct module * mod)
     result = register_owner(dev->parent, mod);
 
     LEAVE_V("%d", result);
-
     return result;
 }
 
