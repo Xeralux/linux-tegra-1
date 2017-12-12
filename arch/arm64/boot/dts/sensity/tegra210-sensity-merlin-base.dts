@@ -35,7 +35,6 @@
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 #include <t210-common-platforms/tegra210-cpufreq.dtsi>
-#include <t210-common-overrides/tegra210-power-dvfs-override-ucm2c.dtsi>
 
 / {
 	model = "merlin";
