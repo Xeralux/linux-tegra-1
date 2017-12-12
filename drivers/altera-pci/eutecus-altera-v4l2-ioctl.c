@@ -44,10 +44,10 @@ static struct video_data_format formats[] = {
         .name = "4:2:0, planar, I420",
         .bpp = 12,
         .fourcc = v4l2_fourcc('I', '4', '2', '0'),
-		.colorspace = V4L2_COLORSPACE_RAW,
+        .colorspace = V4L2_COLORSPACE_RAW,
         .n_planes = 1,  /* one plane on v4l2 layer, multiplane otherwise*/
-		.type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-		.frame_intervals = {
+        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
+        .frame_intervals = {
             {
                 .numerator = 1,
                 .denominator = 30,
