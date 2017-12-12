@@ -43,67 +43,77 @@ static inline void update_input_speed(struct eutecus_v4l2_buffers * buf)
 static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct videoout_buffer * vob)
 {
     struct vb2_buffer * vb = &vob->vb.vb2_buf;
-    struct eutecus_v4l2_frame * frame;
+    struct eutecus_v4l2_frame * frame = container_of(vb2_plane_vaddr(vb, 0), struct eutecus_v4l2_frame, payload);
+    int buffers_waiting = 0;
+    u32 s = 0xffffffffU;
+    struct eutecus_v4l2_frame * oldest = 0;
     int i;
-    int buffer_in_queue;
-    u32 serial = ++buf->next_serial;
 
     ENTER();
 
     update_input_speed(buf);
 
-    for (i = 0, buffer_in_queue = 0; i < buf->indices_used; ++i) {
-        frame = eutecus_get_v4l2_frame_by_index(buf, i);
-        if(FRAME_TO_CONVERT == frame->header.state){
-            ++buffer_in_queue;
+    frame->header.serial = ++(buf->next_serial);
+
+    for (i = 0; i < buf->indices_used; ++i) {
+        struct eutecus_v4l2_frame * f = eutecus_get_v4l2_frame_by_index(buf, i);
+        DEBUG(video, " - Frame #%u is in state \"%s\" (at %p, off=%u)\n", f->header.serial, get_shared_frame_state_name(f), f, buf->offset[i]);
+        switch (f->header.state) {
+            case FRAME_TO_CONVERT:
+                ++buffers_waiting;
+                if (f->header.serial < s) {
+                    s = f->header.serial;
+                    oldest = f;
+                }
+            break;
+            default:
+                // Nothing to do here
+            break;
         }
     }
 
-    frame = container_of(vb2_plane_vaddr(vb, 0), struct eutecus_v4l2_frame, payload);
-
-    frame->header.serial = serial;
-
-    if(buffer_in_queue){
-        videoout_buffer_done(vob, VB2_BUF_STATE_DONE);
-        frame->header.tegra.vob = (u64)vob;
-        ++buf->number_of_input_frames;
-        ++buf->frames_dropped_by_tegra;
-        if(FRAME_USER != frame->header.state){
-            ERROR("The frame state is not USER (%s)!\n", get_shared_frame_state_name(frame));
-            LEAVE();
-            return;
+    if (buffers_waiting >= (buf->indices_used-2)) {
+        if (oldest && oldest->header.tegra.vob) {
+            // Keep the free buffers at this minimum level:
+            struct videoout_buffer * v = (struct videoout_buffer *)oldest->header.tegra.vob;
+            DEBUG(video, "frame #%u dropped back (state: %s) at %p\n", oldest->header.serial, get_shared_frame_state_name(oldest), oldest);
+            oldest->header.tegra.vob = 0UL;
+            oldest->header.state = FRAME_FREE;
+            videoout_buffer_done(v, VB2_BUF_STATE_DONE);
+        } else {
+            ERROR("no frame to give back to the v4l2 system\n");    // Sanity check only
         }
-        DEBUG(video, "Got frame, but frame is already queued for the color converter on the socfpga side, pass back to v4l2 system\n");
-        LEAVE();
-        return;
+    } else {
+        DEBUG(video, "%d frames waiting\n", buffers_waiting);
     }
 
     switch (frame->header.state) {
-        case FRAME_USER:
-            {
-                struct eutecus_v4l2_header * h = &frame->header;
-                const struct vb2_v4l2_buffer * b = &vob->vb;
-                // Copy some v4l2 information:
-                h->seconds      = b->timestamp.tv_sec;
-                h->microseconds = b->timestamp.tv_usec;
-                h->timecode     = b->timecode;
-                h->sequence     = b->sequence;
-                h->index        = vb->index;
-                h->flags        = b->flags;
-                h->field        = b->field;
-            }
+        case FRAME_FREE:
+        case FRAME_READY:
+        {
+            struct eutecus_v4l2_header * h = &frame->header;
+            const struct vb2_v4l2_buffer * b = &vob->vb;
+            // Copy some v4l2 information:
+            h->seconds      = b->timestamp.tv_sec;
+            h->microseconds = b->timestamp.tv_usec;
+            h->timecode     = b->timecode;
+            h->sequence     = b->sequence;
+            h->index        = vb->index;
+            h->flags        = b->flags;
+            h->field        = b->field;
+
             // Setup the buffer state:
+            DEBUG(video, "Got frame #%u (state: %s -> to be converted) at %p (IRQ)\n", frame->header.serial, get_shared_frame_state_name(frame), frame);
             frame->header.tegra.vob = (u64)vob;
             frame->header.state = FRAME_TO_CONVERT;
-            ++buf->number_of_input_frames;
             interrupt_request_2_RS4(buf->tegra.pci);    /* Send an interrupt to the analytics: the frame is ready to be converted */
-            DEBUG(video, "Got frame #%u (state: user -> to_convert) at %p (IRQ)\n", serial, frame);
+        }
         break;
-
         default:
+            DEBUG(video, "frame #%u dropped due to wrong state (%s -> working) at %p\n", frame->header.serial, get_shared_frame_state_name(frame), frame);
             frame->header.tegra.vob = 0UL;
+            frame->header.state = FRAME_FREE;
             videoout_buffer_done(vob, VB2_BUF_STATE_DONE);
-            DEBUG(video, "frame #%u dropped (state: %s) at %p\n", serial, get_shared_frame_state_name(frame), frame);
         break;
     }
 
@@ -248,25 +258,14 @@ static void buffer_queue(struct vb2_buffer * vb)
     struct videoout_dev * dev = vb2_get_videoout_dev(vb->vb2_queue);
     struct vb2_v4l2_buffer *v4b = to_vb2_v4l2_buffer(vb);
     struct videoout_buffer * vob = container_of(v4b, struct videoout_buffer, vb);
+    struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
 
     ENTER();
     DEBUG(generic, "dev=%p, vb=%p\n", dev, vb);
 
     vob->queued = 0;
 
-    if (0) {    /* Threaded mode: */
-        struct videoout_dmaqueue * dma_q = &dev->vidq; // ok
-        unsigned long flags = 0;
-
-        spin_lock_irqsave(&dev->slock, flags);
-        list_add_tail(&vob->list, &dma_q->active);
-        spin_unlock_irqrestore(&dev->slock, flags);
-
-    } else {    /* Direct mode: */
-        struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
-
-        videoout_got_new_frame(pci->frame_buffers, vob);
-    }
+    videoout_got_new_frame(pci->frame_buffers, vob);
 
     LEAVE();
 }
@@ -275,13 +274,15 @@ static int start_streaming(struct vb2_queue * vq, unsigned int count)
 {
     int err = 0;
     struct videoout_dev * dev = vb2_get_videoout_dev(vq);
-    //struct videoout_dmaqueue * dma_q = &dev->vidq;
     struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
     struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
 
     ENTER();
 
     buf->stream.active = 1;
+
+    // Inform the other side about stream status change:
+    interrupt_request_2_RS4(pci);
 
     LEAVE_V("%d", err);
     return err;
@@ -290,7 +291,6 @@ static int start_streaming(struct vb2_queue * vq, unsigned int count)
 static void stop_streaming(struct vb2_queue * vq)
 {
     struct videoout_dev * dev = vb2_get_videoout_dev(vq);
-    //struct videoout_dmaqueue * dma_q = &dev->vidq;
     struct eutecus_pci_data * pci = container_of(dev, struct eutecus_pci_data, vidout);
     struct eutecus_v4l2_buffers * buf = pci->frame_buffers;
     u32 i;
@@ -298,6 +298,9 @@ static void stop_streaming(struct vb2_queue * vq)
     ENTER();
 
     buf->stream.active = 0;
+
+    // Inform the other side about stream status change:
+    interrupt_request_2_RS4(pci);
 
     /* Release all active buffers */
     for (i = 0; i < buf->indices_used; ++i) {
@@ -437,7 +440,6 @@ int altera_v4l2_initialize(struct pci_dev * dev)
 {
     int rc = 0;
     struct eutecus_pci_data * data = pci_get_drvdata(dev);
-    //const struct eutecus_pci_resources * res = data->resources + 1;
     struct videoout_dev * vo = &data->vidout;
 
     ENTER();
