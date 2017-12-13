@@ -33,6 +33,7 @@
 #include <linux/mtd/blktrans.h>
 #include <linux/mutex.h>
 #include <linux/major.h>
+#include <linux/completion.h>
 
 
 struct mtdblk_dev {
@@ -57,16 +58,14 @@ struct mtdblk_dev {
 
 static void erase_callback(struct erase_info *done)
 {
-	wait_queue_head_t *wait_q = (wait_queue_head_t *)done->priv;
-	wake_up(wait_q);
+	complete((struct completion *)done->priv);
 }
 
 static int erase_write (struct mtd_info *mtd, unsigned long pos,
 			int len, const char *buf)
 {
 	struct erase_info erase;
-	DECLARE_WAITQUEUE(wait, current);
-	wait_queue_head_t wait_q;
+	DECLARE_COMPLETION_ONSTACK(work);
 	size_t retlen;
 	int ret;
 
@@ -74,28 +73,25 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	 * First, let's erase the flash block.
 	 */
 
-	init_waitqueue_head(&wait_q);
+	memset(&erase, 0, sizeof(erase));
 	erase.mtd = mtd;
 	erase.callback = erase_callback;
 	erase.addr = pos;
 	erase.len = len;
-	erase.priv = (u_long)&wait_q;
-
-	set_current_state(TASK_INTERRUPTIBLE);
-	add_wait_queue(&wait_q, &wait);
+	erase.priv = (u_long)&work;
 
 	ret = mtd_erase(mtd, &erase);
+	if (!ret) {
+		wait_for_completion(&work);
+		if (erase.state == MTD_ERASE_FAILED)
+			ret = -EIO;
+	}
 	if (ret) {
-		set_current_state(TASK_RUNNING);
-		remove_wait_queue(&wait_q, &wait);
 		printk (KERN_WARNING "mtdblock: erase of region [0x%lx, 0x%x] "
-				     "on \"%s\" failed\n",
-			pos, len, mtd->name);
+				     "on \"%s\" failed, ret=%d\n",
+			pos, len, mtd->name, ret);
 		return ret;
 	}
-
-	schedule();  /* Wait for erase to finish. */
-	remove_wait_queue(&wait_q, &wait);
 
 	/*
 	 * Next, write the data to flash.
