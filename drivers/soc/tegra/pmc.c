@@ -2987,7 +2987,7 @@ void tegra_pmc_init_tsense_reset(struct tegra_pmc *pmc)
 
 	np = of_find_node_by_name(pmc->dev->of_node, "i2c-thermtrip");
 	if (!np) {
-		dev_warn(dev, "i2c-thermtrip node not found, %s.\n", disabled);
+		dev_info(dev, "i2c-thermtrip node not found, %s.\n", disabled);
 		return;
 	}
 
