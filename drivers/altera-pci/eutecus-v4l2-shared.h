@@ -25,36 +25,6 @@
 
 struct videoout_buffer;
 
-enum eutecus_v4l2_frame_state {
-    /// Frame is in initial state
-    /*! The frame is just created. It is set when the Tegra side is started. Such a frame
-        cannot be used while the Cyclone side sets it to \ref FRAME_FREE */
-    FRAME_INITIAL = 0,
-
-    /// Frame is ready to be processed
-    /*! The CycloneV has accepted a \ref FRAME_INITIAL frame */
-    FRAME_FREE,
-
-    /// Frame is available for V4L2
-    /*! internal state change by Tegra: the buffer is made available for the V4L2 system, at startup or the buffer back from SoCFPGA */
-    FRAME_USER,
-
-    /// There is a new frame in the buffer
-    /*! It means that there is an image in this buffer (put by Tegra) and can be processed by the socfpga */
-    FRAME_TO_CONVERT,
-
-    /// Frame is being processed by color converter
-    /*! The SocFPGA has accepted the buffer and the color converter started to work on the frame */
-    FRAME_CONVERTING,
-
-    /// Frame is processed by color converter
-    /*! The SocFPGA has accepted the buffer and the color converter started to work on the frame */
-    FRAME_CONVERTED,
-
-    /// Last entry, just for size check
-    _FRAME_STATE_SIZE
-};
-
 /// Frame Info and Flags
 struct eutecus_v4l2_header {
     /// The full size of the frame structure, including this header
@@ -138,20 +108,6 @@ struct eutecus_v4l2_frame {
     char payload[0];
 
 } PACKED;
-
-/// Readable names for \ref eutecus_v4l2_frame_state values
-#define FRAME_NAMES { "initial", "free", "user", "to_convert", "converting", "converted" }
-
-/// Return readable name of the frame state
-static inline const char * get_shared_frame_state_name(const struct eutecus_v4l2_frame * f)
-{
-    u32 state = f->header.state;
-    static char * names[] = FRAME_NAMES;
-    if (state >= _FRAME_STATE_SIZE) {
-        return "unknown";
-    }
-    return names[state];
-}
 
 /// All buffers
 /*! This structure is stored in the shared (FPGA) memory. It manages the frame buffers.
@@ -240,6 +196,41 @@ struct eutecus_v4l2_buffers {
 inline static struct eutecus_v4l2_frame * eutecus_get_v4l2_frame_by_index(struct eutecus_v4l2_buffers * buf, unsigned int index)
 {
     return buf->frames[buf->offset[index]].frame;
+}
+
+enum eutecus_v4l2_frame_state {
+    /// Frame is ready to be processed
+    /*! Because the memory is cleared at the start (by bootloader or by driver), all frames are started in this state. */
+    FRAME_FREE = 0,
+
+    /// There is a new frame in the buffer
+    /*! It means that there is a raw image in this buffer (put by Tegra) and can be processed by the socfpga. */
+    FRAME_TO_CONVERT,
+
+    /// Frame is being processed by color converter
+    /*! The SocFPGA has accepted the buffer and the color converter started to work on the frame. */
+    FRAME_CONVERTING,
+
+    /// Frame has been processed by color converter
+    /*! It can be re-used by Tegra again. */
+    FRAME_READY,
+
+    /// Last entry, just for size check
+    _FRAME_STATE_SIZE
+};
+
+/// Readable names for \ref eutecus_v4l2_frame_state values
+#define FRAME_NAMES { "free", "to be converted", "converting", "ready" }
+
+/// Return readable name of the frame state
+static inline const char * get_shared_frame_state_name(const struct eutecus_v4l2_frame * f)
+{
+    u32 state = f->header.state;
+    static char * names[] = FRAME_NAMES;
+    if (state >= _FRAME_STATE_SIZE) {
+        return "unknown";
+    }
+    return names[state];
 }
 
 #endif /* __DRIVERS_ALTERA_PCI_EUTECUS_V4L2_SHARED_H_INCLUDED__ */

@@ -76,7 +76,6 @@ static int register_owner(struct device * dev, struct module * mod)
     result = register_owner(dev->parent, mod);
 
     LEAVE_V("%d", result);
-
     return result;
 }
 
@@ -205,7 +204,11 @@ static int altera_pci_probe(struct pci_dev * dev, const struct pci_device_id * e
                         NODEBUG("WARNING: debug is not compiled in, no messages will be displayed.\n");
                     }
 
-                    interrupt_acknowledge_2_RS4(data);  // Clear the interrupt flag for safety
+                    // Clear the interrupt flag for safety:
+                    interrupt_acknowledge_2_RS4(data);
+
+                    // Send an interrupt to fix the initial status of the other side. The stream is not active, at least this information must be sent now.
+                    interrupt_request_2_RS4(data);
 
                     return 0;   // Normal return point
 
