@@ -398,7 +398,7 @@ static int altera_v4l2_queue_init(struct vb2_queue * q, struct pci_dev * dev)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
     q->timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 #else
-    q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+    q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 #endif
 
     status = vb2_queue_init(q);
