@@ -168,6 +168,8 @@
 		linux,pci-domain = <0>;
 		status = "okay";
 
+		/delete-property/ iommus;
+
 		pci@1,0 {
 			nvidia,num-lanes = <4>;
 			status = "okay";
