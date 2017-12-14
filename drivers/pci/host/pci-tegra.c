@@ -1119,6 +1119,14 @@ static int tegra_pcie_attach(struct tegra_pcie *pcie)
 	if (!hotplug_event)
 		return 0;
 
+	if (!pcie->num_ports)
+		tegra_pcie_check_ports(pcie);
+	if (!pcie->num_ports) {
+		dev_info(pcie->dev, "no links, ignoring hotplug event\n");
+		hotplug_event = false;
+		return 0;
+	}
+
 	/* rescan and recreate all pcie data structures */
 	while ((bus = pci_find_next_bus(bus)) != NULL)
 		pci_rescan_bus(bus);
@@ -1177,7 +1185,7 @@ static void work_hotplug_handler(struct work_struct *work)
 	int val;
 
 	PR_FUNC_LINE;
-	if (pcie_driver->plat_data->gpio_hot_plug == -1)
+	if (!gpio_is_valid(pcie_driver->plat_data->gpio_hot_plug))
 		return;
 	val = gpio_get_value(pcie_driver->plat_data->gpio_hot_plug);
 	if (val) {
@@ -2557,6 +2565,13 @@ static int tegra_pcie_conf_gpios(struct tegra_pcie *pcie)
 				__func__, err);
 			return err;
 		}
+		err = gpio_set_debounce(pcie->plat_data->gpio_hot_plug, 50);
+		if (err < 0) {
+			dev_err(pcie->dev,
+				"%s: gpio_set_debounce failed %d\n",
+				__func__, err);
+			return err;
+		}
 		irq = gpio_to_irq(pcie->plat_data->gpio_hot_plug);
 		if (irq < 0) {
 			dev_err(pcie->dev,
@@ -2840,7 +2855,7 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 		goto fail_power_off;
 	}
 
-	if (!pcie->num_ports) {
+	if (!pcie->num_ports && !gpio_is_valid(pcie->plat_data->gpio_hot_plug)) {
 		dev_info(pcie->dev, "PCIE: no end points detected\n");
 		err = -ENODEV;
 		goto fail_power_off;
@@ -4539,7 +4554,7 @@ static int tegra_pcie_probe_complete(struct tegra_pcie *pcie)
 		return ret;
 
 	if (IS_ENABLED(CONFIG_DEBUG_FS))
-		if (pcie->num_ports) {
+		if (pcie->num_ports || gpio_is_valid(pcie->plat_data->gpio_hot_plug)) {
 			ret = tegra_pcie_debugfs_init(pcie);
 			if (ret < 0)
 				dev_err(&pdev->dev, "failed to setup debugfs: %d\n",
@@ -4567,7 +4582,7 @@ static void pcie_delayed_detect(struct work_struct *work)
 	}
 #endif
 	ret = tegra_pcie_probe_complete(pcie);
-	if (ret || !pcie->num_ports) {
+	if (ret || (!pcie->num_ports && !gpio_is_valid(pcie->plat_data->gpio_hot_plug))) {
 		pm_runtime_put_sync(pcie->dev);
 		pm_runtime_disable(pcie->dev);
 		tegra_pd_remove_device(pcie->dev);
