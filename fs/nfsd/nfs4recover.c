@@ -460,7 +460,7 @@ nfsd4_init_recdir(struct net *net)
 	const struct cred *original_cred;
 	int status;
 
-	printk("NFSD: Using %s as the NFSv4 state recovery directory\n",
+	pr_info("NFSD: Using %s as the NFSv4 state recovery directory\n",
 			user_recovery_dirname);
 
 	BUG_ON(nn->rec_file);
