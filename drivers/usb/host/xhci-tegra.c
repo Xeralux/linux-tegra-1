@@ -2555,8 +2555,9 @@ skip_clocks:
 			phy = devm_phy_optional_get(&pdev->dev, prop);
 			if (IS_ERR(phy)) {
 				ret = PTR_ERR(phy);
-				dev_warn(&pdev->dev, "can't get %s phy (%d)\n",
-					prop, ret);
+				if (ret != -EPROBE_DEFER)
+					dev_warn(&pdev->dev, "can't get %s phy (%d)\n",
+						 prop, ret);
 				goto put_mbox;
 			} else {
 				if (phy && strstr(prop, "usb3")) {
