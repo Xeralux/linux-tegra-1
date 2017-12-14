@@ -720,7 +720,7 @@ static int watchdog_release(struct inode *inode, struct file *file)
 
 	/* If the watchdog was not stopped, send a keepalive ping */
 	if (err < 0) {
-		dev_crit(wdd->dev, "watchdog did not stop!\n");
+		dev_info(wdd->dev, "watchdog did not stop!\n");
 		watchdog_ping(wdd);
 	}
 
