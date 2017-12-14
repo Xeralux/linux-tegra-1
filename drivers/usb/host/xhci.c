@@ -3909,7 +3909,7 @@ static int xhci_setup_device(struct usb_hcd *hcd, struct usb_device *udev,
 		ret = -EINVAL;
 		break;
 	case COMP_TX_ERR:
-		dev_warn(&udev->dev, "Device not responding to setup %s.\n", act);
+		dev_info(&udev->dev, "Device not responding to setup %s.\n", act);
 		ret = -EPROTO;
 		break;
 	case COMP_DEV_ERR:
