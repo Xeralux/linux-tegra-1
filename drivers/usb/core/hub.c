@@ -4532,7 +4532,7 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 			}
 			if (retval < 0) {
 				if (retval != -ENODEV)
-					dev_err(&udev->dev, "device not accepting address %d, error %d\n",
+					dev_info(&udev->dev, "device not accepting address %d, error %d\n",
 							devnum, retval);
 				goto fail;
 			}
@@ -5037,7 +5037,7 @@ static void port_event(struct usb_hub *hub, int port1)
 		 */
 		if (!(portstatus & USB_PORT_STAT_ENABLE)
 		    && !connect_change && udev) {
-			dev_err(&port_dev->dev, "disabled by hub (EMI?), re-enabling...\n");
+			dev_dbg(&port_dev->dev, "disabled by hub (EMI?), re-enabling...\n");
 			connect_change = 1;
 		}
 	}
