@@ -35,6 +35,7 @@
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 #include <t210-common-platforms/tegra210-cpufreq.dtsi>
+#include <t210-common-overrides/tegra210-power-dvfs-override-ucm2c.dtsi>
 
 / {
 	model = "merlin";
@@ -68,6 +69,28 @@
 		};
 	};
 
+	cpufreq {
+		cpu-scaling-data {
+			freq-table = <
+				102000
+				204000
+				306000
+				408000
+				510000
+				612000
+				714000
+				816000
+				918000
+				1020000
+				1122000
+				1224000
+				1326000
+				1479000
+				1555000
+				1683000
+			>;
+		};
+	};
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
 		iopad-defaults {
