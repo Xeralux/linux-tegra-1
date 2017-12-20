@@ -67,6 +67,20 @@ static struct video_data_format formats[] = {
                 .vertical = 4,
             },
         },
+    },
+    {
+        .name = "4:2:0, planar, NV12",
+        .bpp = 12,
+        .fourcc = V4L2_PIX_FMT_NV12,
+        .colorspace = V4L2_COLORSPACE_RAW,
+        .n_planes = 1,  /* one plane on v4l2 layer, multiplane otherwise*/
+        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
+        .frame_intervals = {
+            {
+                .numerator = 1,
+                .denominator = 30,
+            },
+        },
     }
 };
 
