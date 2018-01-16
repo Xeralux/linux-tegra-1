@@ -453,6 +453,7 @@ struct tegra_pcie {
 	struct completion completion;
 	bool is_cooling_dev;
 #endif
+	struct completion socfpga_boot_completion;
 
 	struct list_head ports;
 	u32 xbar_config;
@@ -1123,6 +1124,7 @@ static void tegra_pcie_enable_aer(struct tegra_pcie_port *port, bool enable)
 	rp_writel(port, data, NV_PCIE2_RP_VEND_CTL1);
 }
 
+#ifdef NVIDIA_HOTPLUG
 static int tegra_pcie_attach(struct tegra_pcie *pcie)
 {
 	struct pci_bus *bus = NULL;
@@ -1151,6 +1153,7 @@ static int tegra_pcie_attach(struct tegra_pcie *pcie)
 	hotplug_event = false;
 	return 0;
 }
+#endif
 
 static int tegra_pcie_detach(struct tegra_pcie *pcie)
 {
@@ -1201,12 +1204,9 @@ static void work_hotplug_handler(struct work_struct *work)
 	if (!gpio_is_valid(pcie_driver->plat_data->gpio_hot_plug))
 		return;
 	val = gpio_get_value(pcie_driver->plat_data->gpio_hot_plug);
-	if (val) {
+	if (0 == val) {
 		dev_info(pcie_driver->dev, "PCIE Hotplug: Connected\n");
-		tegra_pcie_attach(pcie_driver);
-	} else {
-		dev_info(pcie_driver->dev, "PCIE Hotplug: DisConnected\n");
-		tegra_pcie_detach(pcie_driver);
+		complete(&pcie_driver->socfpga_boot_completion);
 	}
 }
 
@@ -2558,54 +2558,10 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 
 static int tegra_pcie_conf_gpios(struct tegra_pcie *pcie)
 {
-	int irq, err = 0;
+	int err = 0;
 	struct tegra_pcie_port *port, *tmp;
 
 	PR_FUNC_LINE;
-	if (gpio_is_valid(pcie->plat_data->gpio_hot_plug)) {
-		/* configure gpio for hotplug detection */
-		dev_info(pcie->dev, "acquiring hotplug_detect = %d\n",
-				pcie->plat_data->gpio_hot_plug);
-		err = devm_gpio_request(pcie->dev,
-				pcie->plat_data->gpio_hot_plug,
-				"pcie_hotplug_detect");
-		if (err < 0) {
-			dev_err(pcie->dev, "%s: gpio_request failed %d\n",
-					__func__, err);
-			return err;
-		}
-		err = gpio_direction_input(
-				pcie->plat_data->gpio_hot_plug);
-		if (err < 0) {
-			dev_err(pcie->dev,
-				"%s: gpio_direction_input failed %d\n",
-				__func__, err);
-			return err;
-		}
-		err = gpio_set_debounce(pcie->plat_data->gpio_hot_plug, 50);
-		if (err < 0) {
-			dev_err(pcie->dev,
-				"%s: gpio_set_debounce failed %d\n",
-				__func__, err);
-			return err;
-		}
-		irq = gpio_to_irq(pcie->plat_data->gpio_hot_plug);
-		if (irq < 0) {
-			dev_err(pcie->dev,
-				"Unable to get irq for hotplug_detect\n");
-			return err;
-		}
-		err = devm_request_irq(pcie->dev, (unsigned int)irq,
-				gpio_pcie_detect_isr,
-				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-				"pcie_hotplug_detect",
-				(void *)pcie);
-		if (err < 0) {
-			dev_err(pcie->dev,
-				"Unable to claim irq for hotplug_detect\n");
-			return err;
-		}
-	}
 	if (gpio_is_valid(pcie->plat_data->gpio_x1_slot)) {
 		err = devm_gpio_request(pcie->dev,
 			pcie->plat_data->gpio_x1_slot, "pcie_x1_slot");
@@ -2855,7 +2811,6 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 
 	PR_FUNC_LINE;
 
-	INIT_WORK(&pcie->hotplug_detect, work_hotplug_handler);
 	err = tegra_pcie_get_resources(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: get resources failed\n");
@@ -4581,6 +4536,59 @@ static int tegra_pcie_probe_complete(struct tegra_pcie *pcie)
 	return 0;
 }
 
+static int pcie_conf_hotplug_gpio(struct tegra_pcie *pcie)
+{
+       int irq, err = 0;
+
+       if (gpio_is_valid(pcie->plat_data->gpio_hot_plug)) {
+               /* configure gpio for hotplug detection */
+               dev_info(pcie->dev, "acquiring hotplug_detect = %d\n",
+                               pcie->plat_data->gpio_hot_plug);
+               err = devm_gpio_request(pcie->dev,
+                               pcie->plat_data->gpio_hot_plug,
+                               "pcie_hotplug_detect");
+               if (err < 0) {
+                       dev_err(pcie->dev, "%s: gpio_request failed %d\n",
+                                       __func__, err);
+                       return err;
+               }
+               err = gpio_direction_input(
+                               pcie->plat_data->gpio_hot_plug);
+               if (err < 0) {
+                       dev_err(pcie->dev,
+                               "%s: gpio_direction_input failed %d\n",
+                               __func__, err);
+                       return err;
+               }
+               err = gpio_set_debounce(pcie->plat_data->gpio_hot_plug, 50);
+               if (err < 0) {
+            	   	   dev_err(pcie->dev,
+            	   			   "%s: gpio_set_debounce failed %d\n",
+							   __func__, err);
+            	   	   return err;
+               }
+               irq = gpio_to_irq(pcie->plat_data->gpio_hot_plug);
+               if (irq < 0) {
+                       dev_err(pcie->dev,
+                               "Unable to get irq for hotplug_detect\n");
+                       return err;
+               }
+               err = devm_request_irq(pcie->dev, (unsigned int)irq,
+                               gpio_pcie_detect_isr,
+                               IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+                               "pcie_hotplug_detect",
+                               (void *)pcie);
+               if (err < 0) {
+                       dev_err(pcie->dev,
+                               "Unable to claim irq for hotplug_detect\n");
+                       return err;
+               }
+       }
+
+       return 0;
+}
+
+
 static void pcie_delayed_detect(struct work_struct *work)
 {
 	struct tegra_pcie *pcie;
@@ -4598,6 +4606,10 @@ static void pcie_delayed_detect(struct work_struct *work)
 			 "proceeding with PCIe hierarchy enumeraton\n");
 	}
 #endif
+
+	/* we are waiting for CycV */
+	wait_for_completion_interruptible(&pcie->socfpga_boot_completion);
+
 	ret = tegra_pcie_probe_complete(pcie);
 	if (ret || (!pcie->num_ports && !gpio_is_valid(pcie->plat_data->gpio_hot_plug))) {
 		pm_runtime_put_sync(pcie->dev);
@@ -4712,6 +4724,12 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		goto release_drvdata;
 	}
 	tegra_pcie_read_plat_data(pcie);
+	init_completion(&pcie->socfpga_boot_completion);
+	INIT_WORK(&pcie->hotplug_detect, work_hotplug_handler);
+	ret = pcie_conf_hotplug_gpio(pcie);
+	if (ret) {
+		goto release_platdata;
+	}
 
 	match = of_match_device(tegra_pcie_of_match, &pdev->dev);
 	if (!match) {
