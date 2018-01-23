@@ -67,6 +67,14 @@
 			no-map;
 			status = "disabled";
 		};
+
+		vpr-carveout {
+			status = "disabled";
+		};
+	};
+
+	tegra-carveouts {
+		memory-region = <&iram>;
 	};
 
 	cpufreq {
