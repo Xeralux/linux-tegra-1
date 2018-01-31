@@ -223,7 +223,7 @@ struct nvmap_handle_ref {
  * be is 1024 (all physical memory - not a very good idea) or 0 (no page pool
  * at all).
  */
-#define NVMAP_PP_POOL_SIZE               (128)
+#define NVMAP_PP_POOL_SIZE               (256)
 
 struct nvmap_page_pool {
 	struct rt_mutex lock;
