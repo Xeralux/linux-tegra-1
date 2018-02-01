@@ -13,37 +13,9 @@
 
 static struct video_data_format formats[] = {
     {
-        .name = "4:2:2, packed, UYVY",
-        .bpp = 16,
-        .fourcc = V4L2_PIX_FMT_UYVY,
-        .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,
-        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        },
-    },
-    {
-        .name = "4:2:2, packed, YUYV",
-        .bpp = 16,
-        .fourcc = V4L2_PIX_FMT_YUYV,
-        .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,
-        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        },
-    },
-    {
-        .name = "4:2:0, planar, I420",
+        .name = "4:2:0, planar, NV12",
         .bpp = 12,
-        .fourcc = v4l2_fourcc('I', '4', '2', '0'),
+        .fourcc = V4L2_PIX_FMT_NV12,
         .colorspace = V4L2_COLORSPACE_RAW,
         .n_planes = 1,  /* one plane on v4l2 layer, multiplane otherwise*/
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
@@ -51,20 +23,6 @@ static struct video_data_format formats[] = {
             {
                 .numerator = 1,
                 .denominator = 30,
-            },
-        },
-        .plane = {
-            {
-                .horizontal = 8,
-                .vertical = 8,
-            },
-            {
-                .horizontal = 4,
-                .vertical = 4,
-            },
-            {
-                .horizontal = 4,
-                .vertical = 4,
             },
         },
     },
@@ -82,6 +40,7 @@ static struct video_data_format formats[] = {
             },
         },
     }
+
 };
 
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
@@ -236,8 +195,17 @@ static int videoout_enum_framesizes(struct file * file, void * fh, struct v4l2_f
 {
     ENTER();
 
-    LEAVE_V("%d", -EINVAL);
-    return -EINVAL;
+    if (fsize->index > 0) {
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
+
+    fsize->discrete.width = MAX_WINDOW_WIDTH;
+    fsize->discrete.height = MAX_WINDOW_HEIGHT;
+    fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+
+    LEAVE_V("%d", 0);
+    return 0;
 }
 
 static int videoout_g_std(struct file * file, void * priv, v4l2_std_id * std)
@@ -457,8 +425,8 @@ static int videoout_try_fmt_video_output(struct file * file, void * fh, struct v
 
             switch (dev->fmt->type) {
                 case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-                    pf->bytesperline = (pf->width * dev->fmt->bpp) / 8;
-                    pf->sizeimage = pf->height * pf->bytesperline;
+                    pf->bytesperline = pf->width;
+                    pf->sizeimage = pf->height * pf->bytesperline * dev->fmt->bpp / 8;
                 break;
 
                 case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
