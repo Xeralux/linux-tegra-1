@@ -131,78 +131,27 @@ static int queue_setup(struct vb2_queue * vq, const void * parg, unsigned int * 
     ENTER();
 
     if (fmt) {
-        switch (fmt->type) {
-            case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-            {
-                const struct v4l2_pix_format * pf = &fmt->fmt.pix;
+    	const struct v4l2_pix_format * pf = &fmt->fmt.pix;
 
-                DEBUG(generic, "(single plane) frame size: %dx%d\n", (int)pf->width, (int)pf->height);
+    	DEBUG(generic, "(single plane) frame size: %dx%d\n", (int)pf->width, (int)pf->height);
 
-                buf->stream.width = pf->width;
-                buf->stream.height = pf->height;
-                buf->stream.fourcc = pf->pixelformat;
+    	buf->stream.width = pf->width;
+    	buf->stream.height = pf->height;
+    	buf->stream.fourcc = pf->pixelformat;
 
-                sizes[0] = pf->sizeimage;
-                *nplanes = 1;
-                alloc_ctxs[0] = vb2_dma_contig_init_ctx(&dev->dev);
-            }
-            break;
-
-            case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-            {
-                unsigned int i;
-                const struct v4l2_pix_format_mplane * pf = &fmt->fmt.pix_mp;
-
-                DEBUG(generic, "(multiplane=%u) frame size: %dx%d\n", (unsigned)pf->num_planes, (int)pf->width, (int)pf->height);
-
-                buf->stream.width = pf->width;
-                buf->stream.height = pf->height;
-                buf->stream.fourcc = pf->pixelformat;
-
-                *nplanes = pf->num_planes;
-
-                for (i = 0U; i < pf->num_planes; ++i) {
-                    const struct v4l2_plane_pix_format * pp = &pf->plane_fmt[i];
-                    sizes[i] = pp->sizeimage;
-                    alloc_ctxs[i] = vb2_dma_contig_init_ctx(&dev->dev);
-                }
-            }
-            break;
-
-            default:
-                ERROR("invalid buf type (%d) in format", fmt->type);
-                LEAVE_V("%d", -EINVAL);
-                return -EINVAL;
-            break;
-        }
+    	sizes[0] = pf->sizeimage;
+    	*nplanes = 1;
+    	alloc_ctxs[0] = vb2_dma_contig_init_ctx(&dev->dev);
     } else {
         if (vid->fmt) {
-            buf->stream.width = vid->width;
-            buf->stream.height = vid->height;
-            buf->stream.fourcc = vid->fmt->fourcc;
+        	buf->stream.width = vid->width;
+        	buf->stream.height = vid->height;
+        	buf->stream.fourcc = vid->fmt->fourcc;
 
-            switch (vid->fmt->type) {
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-                    DEBUG(generic, "(dev single plane) size: %dx%d, %d bits per pixel\n", (int)vid->width, (int)vid->height, (int)vid->fmt->bpp);
-                    *nplanes = 1;
-                    sizes[0] = (vid->width*vid->height * vid->fmt->bpp) / 8;
-                    alloc_ctxs[0] = vb2_dma_contig_init_ctx(&dev->dev);
-                break;
-
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-                    DEBUG(generic, "(dev multiplane=%u) size: %dx%d, %d bits per pixel\n", (unsigned)vid->fmt->n_planes, (int)vid->width, (int)vid->height, (int)vid->fmt->bpp);
-                    /* We allocate one physical plane, because it is contiguous: */
-                    *nplanes = 1;
-                    sizes[0] = (vid->width*vid->height * vid->fmt->bpp) / 8;
-                    alloc_ctxs[0] = vb2_dma_contig_init_ctx(&dev->dev);
-                break;
-
-                default:
-                    ERROR("invalid buf type (%d) in queue", fmt->type);
-                    LEAVE_V("%d", -EINVAL);
-                    return -EINVAL;
-                break;
-            }
+        	DEBUG(generic, "(dev single plane) size: %dx%d, %d bits per pixel\n", (int)vid->width, (int)vid->height, (int)vid->fmt->bpp);
+        	*nplanes = 1;
+        	sizes[0] = (vid->width * vid->height * vid->fmt->bpp) / 8;
+        	alloc_ctxs[0] = vb2_dma_contig_init_ctx(&dev->dev);
         } else {
             ERROR("no format set.\n");
             return -EINVAL;

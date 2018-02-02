@@ -11,77 +11,19 @@
 #include "eutecus-altera-pci.h"
 #include "eutecus-altera-v4l2-ioctl.h"
 
-static struct video_data_format formats[] = {
-    {
-        .name = "4:2:2, packed, UYVY",
-        .bpp = 16,
-        .fourcc = V4L2_PIX_FMT_UYVY,
-        .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,
-        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        },
-    },
-    {
-        .name = "4:2:2, packed, YUYV",
-        .bpp = 16,
-        .fourcc = V4L2_PIX_FMT_YUYV,
-        .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,
-        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        },
-    },
-    {
-        .name = "4:2:0, planar, I420",
-        .bpp = 12,
-        .fourcc = v4l2_fourcc('I', '4', '2', '0'),
-        .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,  /* one plane on v4l2 layer, multiplane otherwise*/
-        .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        },
-        .plane = {
-            {
-                .horizontal = 8,
-                .vertical = 8,
-            },
-            {
-                .horizontal = 4,
-                .vertical = 4,
-            },
-            {
-                .horizontal = 4,
-                .vertical = 4,
-            },
-        },
-    },
-    {
+static struct video_data_format formats = {
         .name = "4:2:0, planar, NV12",
         .bpp = 12,
         .fourcc = V4L2_PIX_FMT_NV12,
         .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,  /* one plane on v4l2 layer, multiplane otherwise*/
+        .n_planes = 1,  /* one plane on v4l2 layer */
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
         .frame_intervals = {
             {
                 .numerator = 1,
                 .denominator = 30,
             },
-        },
-    }
+        }
 };
 
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
@@ -184,15 +126,9 @@ static int videoout_streamon(struct file * file, void * priv, enum v4l2_buf_type
 
     ENTER();
 
-    switch (t) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-            /* accepted */
-        break;
-
-        default:
-            return -EINVAL;
-        break;
+    if (t != formats.type) {
+    	LEAVE_V("%d", -EINVAL);
+    	return -EINVAL;
     }
 
     rs = vb2_ioctl_streamon(file, priv, t);
@@ -207,15 +143,9 @@ static int videoout_streamoff(struct file * file, void * priv, enum v4l2_buf_typ
 
     ENTER();
 
-    switch (t) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-            /* accepted */
-        break;
-
-        default:
-            return -EINVAL;
-        break;
+    if (t != formats.type) {
+    	LEAVE_V("%d", -EINVAL);
+    	return -EINVAL;
     }
 
     rs = vb2_ioctl_streamoff(file, priv, t);
@@ -236,8 +166,17 @@ static int videoout_enum_framesizes(struct file * file, void * fh, struct v4l2_f
 {
     ENTER();
 
-    LEAVE_V("%d", -EINVAL);
-    return -EINVAL;
+    if (fsize->index > 0) {
+        LEAVE_V("%d", -EINVAL);
+        return -EINVAL;
+    }
+
+    fsize->discrete.width = MAX_WINDOW_WIDTH;
+    fsize->discrete.height = MAX_WINDOW_HEIGHT;
+    fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+
+    LEAVE_V("%d", 0);
+    return 0;
 }
 
 static int videoout_g_std(struct file * file, void * priv, v4l2_std_id * std)
@@ -338,17 +277,6 @@ static int videoout_s_param(struct file * file, void * fh, struct v4l2_streampar
         return -EINVAL;
     }
 
-    switch (par->type) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-            /* accepted */
-        break;
-
-        default:
-            return -EINVAL;
-        break;
-    }
-
     /* The frame interval time: */
     buf->stream.numerator = par->parm.output.timeperframe.numerator;
     buf->stream.denominator = par->parm.output.timeperframe.denominator;
@@ -359,14 +287,14 @@ static int videoout_s_param(struct file * file, void * fh, struct v4l2_streampar
 
 static int videoout_enum_fmt_video_output(struct file * file, void * fh, struct v4l2_fmtdesc * fmt)
 {
-    const struct video_data_format * f = formats + fmt->index;
+    const struct video_data_format* f = &formats;
     unsigned int index = fmt->index;
 
     ENTER_V("idx=%d", fmt->index);
 
     memset(fmt, 0, sizeof(*fmt));
 
-    if (index >= ARRAY_SIZE(formats)) {
+    if (index > 0) {
         DEBUG(generic, "fmt index %d is out of range (end of iteration).\n", index);
         LEAVE_V("%d", -EINVAL);
         return -EINVAL;
@@ -383,164 +311,40 @@ static int videoout_enum_fmt_video_output(struct file * file, void * fh, struct 
     return 0;
 }
 
-/// Check if the format is known
-static struct video_data_format * videoout_get_format(struct v4l2_format * fmt)
-{
-    int i;
-    u32 pixelformat = 0U;
-
-    ENTER();
-
-    switch (fmt->type) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-            pixelformat = fmt->fmt.pix.pixelformat;
-        break;
-
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-            pixelformat = fmt->fmt.pix_mp.pixelformat;
-        break;
-
-        default:
-            ERROR("unknown v4l2_format type: %d\n", fmt->type);
-            LEAVE_V("%p", NULL);
-            return NULL;
-        break;
-    }
-
-    for (i = 0; i < ARRAY_SIZE(formats); ++i) {
-        if (formats[i].fourcc == pixelformat) {
-            DEBUG(generic, "found format '%s'\n", formats[i].name);
-            LEAVE_V("format at %p", formats + i);
-            return formats + i;
-        }
-    }
-
-    DEBUG(generic, "pixel format '" FOURCC_FORMAT "' not found\n", FOURCC_CHARS(pixelformat));
-
-    LEAVE_V("%p", NULL);
-    return NULL;
-}
-
 static int videoout_try_fmt_video_output(struct file * file, void * fh, struct v4l2_format * fmt)
 {
-    struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
+    int w, h;
+	struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
+    struct v4l2_pix_format * pf = &fmt->fmt.pix;
 
     ENTER();
 
-    dev->fmt = videoout_get_format(fmt);
-    if (!dev->fmt) {
+    if ((pf->pixelformat != formats.fourcc) || (fmt->type != formats.type)){
         LEAVE_V("%d", -EINVAL);
         return -EINVAL;
     }
+    dev->fmt = &formats;
 
-    switch (fmt->type) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        {
-            int w, h;
-            struct v4l2_pix_format * pf = &fmt->fmt.pix;
+    w = pf->width;
+    h = pf->height;
 
-            w = pf->width;
-            h = pf->height;
+    w = min(w, MAX_WINDOW_WIDTH);
+    w = max(w, 8);
+    h = min(h, MAX_WINDOW_HEIGHT);
+    h = max(h, 8);
 
-            w = min(w, MAX_WINDOW_WIDTH);
-            w = max(w, 8);
-            h = min(h, MAX_WINDOW_HEIGHT);
-            h = max(h, 8);
+    dev->width = w;
+    dev->height = h;
 
-            dev->width = w;
-            dev->height = h;
+    pf->width = w;
+    pf->height = h;
+    pf->pixelformat = dev->fmt->fourcc;
+    pf->field = V4L2_FIELD_NONE;
+    pf->colorspace = dev->fmt->colorspace;
+    pf->bytesperline = pf->width;
+    pf->sizeimage = pf->height * pf->bytesperline * dev->fmt->bpp / 8;
 
-            pf->width = w;
-            pf->height = h;
-            pf->pixelformat = dev->fmt->fourcc;
-            pf->field = V4L2_FIELD_NONE;
-
-            switch (dev->fmt->type) {
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-                    pf->bytesperline = (pf->width * dev->fmt->bpp) / 8;
-                    pf->sizeimage = pf->height * pf->bytesperline;
-                break;
-
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-                {
-                    /* Use the stride from the first plane (Y), but the imagesize is the same: */
-                    const struct plane_info * pi = &dev->fmt->plane[0];
-                    pf->bytesperline = (pf->width * pi->horizontal) / 8;
-                    pf->sizeimage = pf->height * (pf->width * dev->fmt->bpp) / 8;
-                }
-                break;
-
-                default:
-                    ERROR("Internal error: invalid frame format!\n");
-                    LEAVE_V("%d", -EINVAL);
-                    return -EINVAL;
-                break;
-            }
-
-            DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", dev->fmt->name, w, h, dev, pf->bytesperline, pf->sizeimage);
-        }
-        break;
-
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-        {
-            int w, h;
-            struct v4l2_pix_format_mplane * pf = &fmt->fmt.pix_mp;
-
-            w = pf->width;
-            h = pf->height;
-
-            w = min(w, MAX_WINDOW_WIDTH);
-            w = max(w, 8);
-            h = min(h, MAX_WINDOW_HEIGHT);
-            h = max(h, 8);
-
-            dev->width = w;
-            dev->height = h;
-
-            pf->width = w;
-            pf->height = h;
-            pf->pixelformat = dev->fmt->fourcc;
-            pf->colorspace = dev->fmt->colorspace;
-            pf->field = V4L2_FIELD_NONE;
-            pf->num_planes = dev->fmt->n_planes;
-
-            switch (dev->fmt->type) {
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-                {
-                    struct v4l2_plane_pix_format * pp = &pf->plane_fmt[0];
-                    pp->bytesperline = (pf->width * dev->fmt->bpp) / 8;
-                    pp->sizeimage = pf->height * pp->bytesperline;
-                }
-                break;
-
-                case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-                {
-                    unsigned int i;
-                    for (i = 0U; i < dev->fmt->n_planes; ++i) {
-                        struct v4l2_plane_pix_format * pp = &pf->plane_fmt[i];
-                        const struct plane_info * pi = &dev->fmt->plane[i];
-                        pp->bytesperline = (pf->width * pi->horizontal) / 8;
-                        pp->sizeimage = (pf->height * pp->bytesperline * pi->vertical) / 8;
-                    }
-                }
-                break;
-
-                default:
-                    ERROR("Internal error: invalid frame format!\n");
-                    LEAVE_V("%d", -EINVAL);
-                    return -EINVAL;
-                break;
-            }
-
-            DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride={%u,%u,%u,%u} size={%u,%u,%u,%u})\n", dev->fmt->name, w, h, dev, pf->plane_fmt[0].bytesperline, pf->plane_fmt[1].bytesperline, pf->plane_fmt[2].bytesperline, pf->plane_fmt[3].bytesperline, pf->plane_fmt[0].sizeimage, pf->plane_fmt[1].sizeimage, pf->plane_fmt[2].sizeimage, pf->plane_fmt[3].sizeimage);
-        }
-        break;
-
-        default:
-            LEAVE_V("%d", -ENOENT);
-            return -ENOENT; /* sanity check only */
-        break;
-    }
+    DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", dev->fmt->name, w, h, dev, pf->bytesperline, pf->sizeimage);
 
     LEAVE_V("%d", 0);
     return 0;
@@ -550,6 +354,7 @@ static int videoout_g_fmt_video_output(struct file * file, void * fh, struct v4l
 {
     struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
     const struct video_data_format * fmt = dev->fmt;
+    struct v4l2_pix_format * pf = &f->fmt.pix;
 
     ENTER();
 
@@ -564,52 +369,15 @@ static int videoout_g_fmt_video_output(struct file * file, void * fh, struct v4l
         return -EINVAL;
     }
 
-    switch (fmt->type) {
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-        {
-            struct v4l2_pix_format * pf = &f->fmt.pix;
+    pf->width = dev->width;
+    pf->height = dev->height;
+    pf->pixelformat = fmt->fourcc;
+    pf->colorspace = fmt->colorspace;
+    pf->field = V4L2_FIELD_NONE;
+    pf->bytesperline = pf->width;
+    pf->sizeimage = pf->height * pf->bytesperline * dev->fmt->bpp / 8;
 
-            pf->width = dev->width;
-            pf->height = dev->height;
-            pf->pixelformat = fmt->fourcc;
-            pf->colorspace = fmt->colorspace;
-            pf->field = V4L2_FIELD_NONE;
-
-            pf->bytesperline = (pf->width * dev->fmt->bpp) / 8;
-            pf->sizeimage = pf->height * pf->bytesperline;
-
-            DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", fmt->name, pf->width, pf->height, dev, pf->bytesperline, pf->sizeimage);
-        }
-        break;
-
-        case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-        {
-            unsigned int i;
-            struct v4l2_pix_format_mplane * pf = &f->fmt.pix_mp;
-
-            pf->width = dev->width;
-            pf->height = dev->height;
-            pf->pixelformat = fmt->fourcc;
-            pf->colorspace = fmt->colorspace;
-            pf->field = V4L2_FIELD_NONE;
-            pf->num_planes = fmt->n_planes;
-
-            for (i = 0U; i < pf->num_planes; ++i) {
-                struct v4l2_plane_pix_format * pp = &pf->plane_fmt[i];
-                const struct plane_info * pi = &fmt->plane[i];
-                pp->bytesperline = (pf->width * pi->horizontal) / 8;
-                pp->sizeimage = (pf->height * pp->bytesperline * pi->vertical) / 8;
-            }
-
-            DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u,%u,%u,%u size=%u,%u,%u,%u)\n", fmt->name, pf->width, pf->height, dev, pf->plane_fmt[0].bytesperline, pf->plane_fmt[1].bytesperline, pf->plane_fmt[2].bytesperline, pf->plane_fmt[3].bytesperline, pf->plane_fmt[0].sizeimage, pf->plane_fmt[1].sizeimage, pf->plane_fmt[2].sizeimage, pf->plane_fmt[3].sizeimage);
-        }
-        break;
-
-        default:
-            LEAVE_V("%d", -ENOENT);
-            return -ENOENT; /* sanity check only */
-        break;
-    }
+    DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", fmt->name, pf->width, pf->height, dev, pf->bytesperline, pf->sizeimage);
 
     LEAVE_V("%d", 0);
     return 0;
@@ -670,11 +438,8 @@ const struct v4l2_ioctl_ops videoout_ioctl_ops = {
     .vidioc_enum_frameintervals     =   videoout_enum_frameintervals,
     .vidioc_enum_fmt_vid_out        =   videoout_enum_fmt_video_output,
     .vidioc_try_fmt_vid_out         =   videoout_try_fmt_video_output,
-    .vidioc_try_fmt_vid_out_mplane  =   videoout_try_fmt_video_output,
     .vidioc_g_fmt_vid_out           =   videoout_g_fmt_video_output,
-    .vidioc_g_fmt_vid_out_mplane    =   videoout_g_fmt_video_output,
     .vidioc_s_fmt_vid_out           =   videoout_s_fmt_video_output,
-    .vidioc_s_fmt_vid_out_mplane    =   videoout_s_fmt_video_output,
 };
 
 /* * * * * * * * * * * * * End - of - File * * * * * * * * * * * * * * */
