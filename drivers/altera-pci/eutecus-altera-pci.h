@@ -203,32 +203,45 @@ inline static int eutecus_remap(struct vm_area_struct * vma, resource_size_t sta
     return io_remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 }
 
-static const char * vb_state_names[] = {
-	"VB2_BUF_STATE_DEQUEUED",
-	"VB2_BUF_STATE_PREPARING",
-	"VB2_BUF_STATE_PREPARED",
-	"VB2_BUF_STATE_QUEUED",
-	"VB2_BUF_STATE_REQUEUEING",
-	"VB2_BUF_STATE_ACTIVE",
-	"VB2_BUF_STATE_DONE",
-	"VB2_BUF_STATE_ERROR",
-};
-
 static inline const char * get_vb_state_name(struct vb2_buffer * vb)
 {
-    int state;
+    const char *name;
 
     if(!vb){
         return "null";
     }
 
-    state = vb->state;
+    switch (vb->state) {
+        case VB2_BUF_STATE_DEQUEUED:
+            name = "VB2_BUF_STATE_DEQUEUED";
+            break;
+        case VB2_BUF_STATE_PREPARING:
+            name = "VB2_BUF_STATE_PREPARING";
+            break;
+        case VB2_BUF_STATE_PREPARED:
+            name = "VB2_BUF_STATE_PREPARED";
+            break;
+        case VB2_BUF_STATE_QUEUED:
+            name = "VB2_BUF_STATE_QUEUED";
+            break;
+        case VB2_BUF_STATE_REQUEUEING:
+            name = "VB2_BUF_STATE_REQUEUEING";
+            break;
+        case VB2_BUF_STATE_ACTIVE:
+            name = "VB2_BUF_STATE_ACTIVE";
+            break;
+        case VB2_BUF_STATE_DONE:
+            name = "VB2_BUF_STATE_DONE";
+            break;
+        case VB2_BUF_STATE_ERROR:
+            name = "VB2_BUF_STATE_ERROR";
+            break;
+        default:
+            name = "unknown";
+            break;
+        }
 
-    if (state < 0 || state > VB2_BUF_STATE_ERROR) {
-        return "unknown";
-    }
-
-    return vb_state_names[state];
+    return name;
 }
 
 int init_cfile(struct eutecus_pci_data * data, struct pci_dev * dev);
