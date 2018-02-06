@@ -57,7 +57,7 @@ static void videoout_got_new_frame(struct eutecus_v4l2_buffers * buf, struct vid
 
     for (i = 0; i < buf->indices_used; ++i) {
         struct eutecus_v4l2_frame * f = eutecus_get_v4l2_frame_by_index(buf, i);
-        DEBUG(video, " - Frame #%u is in state \"%s\" (at %p, off=%u)\n", f->header.serial, get_shared_frame_state_name(f), f, buf->offset[i]);
+        DEBUG(video, " - Frame #%u is in state \"%s\" (at %p, off=%u) vb state: %s ts=%lld %lld\n", f->header.serial, get_shared_frame_state_name(f), f, buf->offset[i], get_vb_state_name(vb), f->header.seconds, f->header.microseconds);
         switch (f->header.state) {
             case FRAME_TO_CONVERT:
                 ++buffers_waiting;
@@ -214,6 +214,11 @@ static void buffer_queue(struct vb2_buffer * vb)
 
     vob->queued = 0;
 
+    // Inform the V4L2 driver that the eutecus driver using this buffer
+    // VB2_BUF_STATE_ACTIVE: buffer queued in driver and possibly used in a hardware operation
+
+    vb->state = VB2_BUF_STATE_ACTIVE;
+
     videoout_got_new_frame(pci->frame_buffers, vob);
 
     LEAVE();
@@ -254,10 +259,11 @@ static void stop_streaming(struct vb2_queue * vq)
     /* Release all active buffers */
     for (i = 0; i < buf->indices_used; ++i) {
         struct eutecus_v4l2_frame * frame = eutecus_get_v4l2_frame_by_index(buf, i);
+        frame->header.state = FRAME_FREE;
         if (frame->header.tegra.vob) {
             struct videoout_buffer * vob = (struct videoout_buffer *)frame->header.tegra.vob;
             if (!vob->queued) {
-                DEBUG(video, "frame #%u is DONE at %p\n", frame->header.serial, frame);
+                DEBUG(video, "frame #%u is DONE at %p and it is in state %s\n", frame->header.serial, frame, get_shared_frame_state_name(frame));
                 videoout_buffer_done(vob, VB2_BUF_STATE_QUEUED);
             }
         }

@@ -203,6 +203,47 @@ inline static int eutecus_remap(struct vm_area_struct * vma, resource_size_t sta
     return io_remap_pfn_range(vma, vma->vm_start, start >> PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
 }
 
+static inline const char * get_vb_state_name(struct vb2_buffer * vb)
+{
+    const char *name;
+
+    if(!vb){
+        return "null";
+    }
+
+    switch (vb->state) {
+        case VB2_BUF_STATE_DEQUEUED:
+            name = "VB2_BUF_STATE_DEQUEUED";
+            break;
+        case VB2_BUF_STATE_PREPARING:
+            name = "VB2_BUF_STATE_PREPARING";
+            break;
+        case VB2_BUF_STATE_PREPARED:
+            name = "VB2_BUF_STATE_PREPARED";
+            break;
+        case VB2_BUF_STATE_QUEUED:
+            name = "VB2_BUF_STATE_QUEUED";
+            break;
+        case VB2_BUF_STATE_REQUEUEING:
+            name = "VB2_BUF_STATE_REQUEUEING";
+            break;
+        case VB2_BUF_STATE_ACTIVE:
+            name = "VB2_BUF_STATE_ACTIVE";
+            break;
+        case VB2_BUF_STATE_DONE:
+            name = "VB2_BUF_STATE_DONE";
+            break;
+        case VB2_BUF_STATE_ERROR:
+            name = "VB2_BUF_STATE_ERROR";
+            break;
+        default:
+            name = "unknown";
+            break;
+        }
+
+    return name;
+}
+
 int init_cfile(struct eutecus_pci_data * data, struct pci_dev * dev);
 void destroy_cfile(struct eutecus_pci_data * data);
 int altera_v4l2_initialize(struct pci_dev * dev);
