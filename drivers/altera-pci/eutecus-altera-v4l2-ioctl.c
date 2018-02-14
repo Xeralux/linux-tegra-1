@@ -11,19 +11,15 @@
 #include "eutecus-altera-pci.h"
 #include "eutecus-altera-v4l2-ioctl.h"
 
-static struct video_data_format formats = {
+const struct video_data_format videoout_formats = {
         .name = "4:2:0, planar, NV12",
         .bpp = 12,
         .fourcc = V4L2_PIX_FMT_NV12,
         .colorspace = V4L2_COLORSPACE_RAW,
-        .n_planes = 1,  /* one plane on v4l2 layer */
+        .n_planes = 1,
         .type = V4L2_BUF_TYPE_VIDEO_OUTPUT,
-        .frame_intervals = {
-            {
-                .numerator = 1,
-                .denominator = 30,
-            },
-        }
+		.min_fps = 0, /* 0 fps means variable fps */
+        .max_fps = 30
 };
 
 static int videoout_querycap(struct file * file, void * fh, struct v4l2_capability * cap)
@@ -126,7 +122,7 @@ static int videoout_streamon(struct file * file, void * priv, enum v4l2_buf_type
 
     ENTER();
 
-    if (t != formats.type) {
+    if (t != videoout_formats.type) {
     	LEAVE_V("%d", -EINVAL);
     	return -EINVAL;
     }
@@ -143,7 +139,7 @@ static int videoout_streamoff(struct file * file, void * priv, enum v4l2_buf_typ
 
     ENTER();
 
-    if (t != formats.type) {
+    if (t != videoout_formats.type) {
     	LEAVE_V("%d", -EINVAL);
     	return -EINVAL;
     }
@@ -231,12 +227,11 @@ static int videoout_s_output(struct file * file, void * fh, unsigned int i)
 static int videoout_enum_frameintervals(struct file * file, void * priv, struct v4l2_frmivalenum * fval)
 {
     struct videoout_dev * dev = video_drvdata(file);
-    const struct frame_interval * fi;
 
     ENTER();
 
     /* We have only one choice: */
-    if (fval->index >= MAX_FRAME_INTERVALS) {
+    if (fval->index > 0) {
         LEAVE_V("%d", -EINVAL);
         return -EINVAL;
     }
@@ -247,19 +242,17 @@ static int videoout_enum_frameintervals(struct file * file, void * priv, struct 
         return -EINVAL;
     }
 
-    fi = &dev->fmt->frame_intervals[fval->index];
+    /* reporting a range of FPS */
+    fval->type = V4L2_FRMIVAL_TYPE_CONTINUOUS;
+    fval->stepwise.min.numerator = 1;
+    fval->stepwise.min.denominator = dev->fmt->max_fps;
+    fval->stepwise.max.numerator = 1;
+    fval->stepwise.max.denominator = dev->fmt->min_fps;
+    fval->stepwise.step.numerator = 1;
+    fval->stepwise.step.denominator = 1;
 
-    if (!fi->numerator || !fi->denominator) {
-        LEAVE_V("%d", -EINVAL);
-        return -EINVAL;
-    }
+    LEAVE_V("Min %u FPS max %u FPS", fval->stepwise.max.denominator, fval->stepwise.min.denominator);
 
-    fval->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-
-    fval->discrete.numerator = fi->numerator;
-    fval->discrete.denominator = fi->denominator;
-
-    LEAVE_V("%d %u/%u FPS", 0, fval->discrete.numerator, fval->discrete.denominator);
     return 0;
 };
 
@@ -287,7 +280,7 @@ static int videoout_s_param(struct file * file, void * fh, struct v4l2_streampar
 
 static int videoout_enum_fmt_video_output(struct file * file, void * fh, struct v4l2_fmtdesc * fmt)
 {
-    const struct video_data_format* f = &formats;
+    const struct video_data_format* f = &videoout_formats;
     unsigned int index = fmt->index;
 
     ENTER_V("idx=%d", fmt->index);
@@ -313,38 +306,25 @@ static int videoout_enum_fmt_video_output(struct file * file, void * fh, struct 
 
 static int videoout_try_fmt_video_output(struct file * file, void * fh, struct v4l2_format * fmt)
 {
-    int w, h;
 	struct videoout_dev * dev = video_get_drvdata(video_devdata(file));
     struct v4l2_pix_format * pf = &fmt->fmt.pix;
 
     ENTER();
 
-    if ((pf->pixelformat != formats.fourcc) || (fmt->type != formats.type)){
+    if ((pf->pixelformat != videoout_formats.fourcc) || (fmt->type != videoout_formats.type)){
         LEAVE_V("%d", -EINVAL);
         return -EINVAL;
     }
-    dev->fmt = &formats;
 
-    w = pf->width;
-    h = pf->height;
-
-    w = min(w, MAX_WINDOW_WIDTH);
-    w = max(w, 8);
-    h = min(h, MAX_WINDOW_HEIGHT);
-    h = max(h, 8);
-
-    dev->width = w;
-    dev->height = h;
-
-    pf->width = w;
-    pf->height = h;
+    pf->width = dev->width;
+    pf->height = dev->height;
     pf->pixelformat = dev->fmt->fourcc;
     pf->field = V4L2_FIELD_NONE;
     pf->colorspace = dev->fmt->colorspace;
     pf->bytesperline = pf->width;
     pf->sizeimage = pf->height * pf->bytesperline * dev->fmt->bpp / 8;
 
-    DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", dev->fmt->name, w, h, dev, pf->bytesperline, pf->sizeimage);
+    DEBUG(generic, "using format '%s' and size %dx%d on dev %p (stride=%u, size=%u)\n", dev->fmt->name, pf->width, pf->height, dev, pf->bytesperline, pf->sizeimage);
 
     LEAVE_V("%d", 0);
     return 0;

@@ -22,15 +22,6 @@ struct plane_info {
     unsigned int vertical;
 };
 
-/* Frame interval time */
-struct frame_interval {
-    unsigned int numerator;
-
-    unsigned int denominator;
-};
-
-#define MAX_FRAME_INTERVALS 4
-
 struct video_data_format {
     /* Descriptive name */
     char name[32];
@@ -42,7 +33,9 @@ struct video_data_format {
 
     enum v4l2_colorspace colorspace;
 
-    struct frame_interval frame_intervals[MAX_FRAME_INTERVALS];
+    /* fps range */
+    unsigned int min_fps;
+    unsigned int max_fps;
 
     /* Number of planes.
      * If this is >1, then the member 'plane' is in use (see below). */
@@ -56,6 +49,8 @@ struct video_data_format {
 };
 
 extern const struct v4l2_ioctl_ops videoout_ioctl_ops;
+extern const struct video_data_format videoout_formats;
+
 
 #endif /* __DRIVERS_ALTERA_PCI_EUTECUS_ALTERA_V4L2_IOCTL_H_INCLUDED__ */
 
