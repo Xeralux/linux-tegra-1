@@ -401,6 +401,10 @@ int altera_v4l2_initialize(struct pci_dev * dev)
 
     snprintf(vo->v4l2_dev.name, sizeof(vo->v4l2_dev.name), "%s-%03d", MY_MODULE_NAME, 0);
 
+    /* default frame data */
+    vo->fmt = &videoout_formats;
+    vo->width = MAX_WINDOW_WIDTH;
+    vo->height = MAX_WINDOW_HEIGHT;
     spin_lock_init(&vo->slock);
     mutex_init(&vo->mutex);
 
