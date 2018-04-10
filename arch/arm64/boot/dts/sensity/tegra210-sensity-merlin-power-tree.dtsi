@@ -14,7 +14,8 @@
  *
  */
 
-#include "jetson-platforms/tegra210-jetson-common-power-tree-p2530-0930-e03.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-pmic-p2180-p2597-a00.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-power-fixed-p2180-p2597-a00.dtsi"
 
 / {
 
