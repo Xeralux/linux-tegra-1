@@ -158,6 +158,7 @@
 			pinctrl-1 = <>;
 			regulator-supplies = "vddio-dmic";
 			vddio-dmic-supply = <&max77620_sd3>;
+			enable-cya;
 		};
 
 		i2s@702d1100 {
@@ -168,6 +169,15 @@
 			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
 			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
 			fsync-width = <0>;
+		};
+
+		i2s@702d1400 {
+			/*
+			 * I2S5 on Jetson TX1 uses the I2S5B pads and
+			 * to use these pads bit 0 in the I2S_CYA
+			 * register must be set.
+			 */
+			enable-cya;
 		};
 	};
 
@@ -256,6 +266,10 @@
 
 		sor {
 		        status = "disabled";
+		};
+
+		dpaux {
+			status = "disabled";
 		};
 
 		dpaux1 {
@@ -840,6 +854,12 @@
 		nvidia,cf = <6>;
 		nvidia,ci = <0>;
 		nvidia,cg = <2>;
+		nvidia,idle-override;
+		nvidia,one-shot-calibrate;
+		nvidia,pwm-period = <2500>; /* 2.5us */
+		pinctrl-names = "dvfs_pwm_enable", "dvfs_pwm_disable";
+		pinctrl-0 = <&dvfs_pwm_active_state>;
+		pinctrl-1 = <&dvfs_pwm_inactive_state>;
 	};
 
 	leds {
@@ -855,6 +875,14 @@
 	};
 
 	bluedroid_pm {
+		status = "disabled";
+	};
+
+	pwm-fan {
+		status = "disabled";
+	};
+
+	thermal-fan-est {
 		status = "disabled";
 	};
 

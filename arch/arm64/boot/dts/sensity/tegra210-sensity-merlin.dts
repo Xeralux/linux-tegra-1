@@ -31,18 +31,6 @@
 		};
 	};
 
-	host1x {
-		dc@54200000 {
-			status = "disabled";
-		};
-
-		dc@54240000 {
-			status = "disabled";
-			nvidia,dc-or-node = "/host1x/sor1";
-		};
-
-	};
-
 	backlight {
 		status = "disabled";
 	};
