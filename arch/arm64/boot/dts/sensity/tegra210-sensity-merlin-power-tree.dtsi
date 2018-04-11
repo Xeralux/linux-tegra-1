@@ -15,7 +15,7 @@
  */
 
 #include "jetson-platforms/tegra210-jetson-cv-pmic-p2180-p2597-a00.dtsi"
-#include "jetson-platforms/tegra210-jetson-cv-power-fixed-p2180-p2597-a00.dtsi"
+#include "tegra210-sensity-merlin-power-fixed.dtsi"
 
 / {
 
@@ -180,26 +180,6 @@
 	};
 
 	host1x {
-		/* tegradc.0 */
-		dc@54200000 {
-			avdd_dsi_csi-supply = <&max77620_ldo0>;
-			avdd_lcd-supply = <&en_avdd_disp_3v3>;
-			dvdd_lcd-supply = <&en_dvdd_disp_1v8>;
-			vdd_lcd_bl_en-supply = <&lcd_bl_en>;
-			vdd_lcd_bl-supply = <&vdd_3v3>;
-
-			/* eDP */
-			vdd_ds_1v8-supply  = <&en_dvdd_disp_1v8>;
-			avdd_io_edp-supply = <&max77620_gpio7>;
-		};
-
-		/* tegradc.1 */
-		dc@54240000 {
-			avdd_hdmi-supply = <&max77620_ldo8>;    /* 1V05 */
-			avdd_hdmi_pll-supply = <&max77620_sd3>; /* 1V8 */
-			vdd_hdmi_5v0-supply = <&vdd_hdmi>;	/* 5V0 GPIO_PCC7 fixed reg */
-		};
-
 		vi {
 			avdd_dsi_csi-supply = <&max77620_ldo0>;
 		};
@@ -286,10 +266,6 @@
 		dvdd-supply = <&max77620_sd3>;
 	};
 
-	pwm-fan {
-		vdd-fan-supply = <&vdd_fan>;
-	};
-
 	pmc@7000e400 {
 		bootrom-commands {
 			reset-commands {
@@ -328,13 +304,6 @@
 								0x41 0xF8>;
 				};
 			};
-		};
-	};
-
-	spi@7000da00 {
-		spi-touch19x12@0 {
-			avdd-supply = <&en_vdd_ts_hv_3v3>;
-			dvdd-supply = <&en_vdd_ts_1v8>;
 		};
 	};
 
