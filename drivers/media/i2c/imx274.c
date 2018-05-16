@@ -382,14 +382,23 @@ static int imx274_power_get(struct imx274 *priv)
 	}
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
-			&pw->avdd, pdata->regulators.avdd);
+	if (pdata->regulators.avdd)
+		err |= camera_common_regulator_get(&priv->i2c_client->dev,
+						   &pw->avdd, pdata->regulators.avdd);
+	else
+		pw->avdd = NULL;
 	/* digital 1.2v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
-			&pw->dvdd, pdata->regulators.dvdd);
+	if (pdata->regulators.dvdd)
+		err |= camera_common_regulator_get(&priv->i2c_client->dev,
+						   &pw->dvdd, pdata->regulators.dvdd);
+	else
+		pw->dvdd = NULL;
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
-			&pw->iovdd, pdata->regulators.iovdd);
+	if (pdata->regulators.iovdd)
+		err |= camera_common_regulator_get(&priv->i2c_client->dev,
+						   &pw->iovdd, pdata->regulators.iovdd);
+	else
+		pw->iovdd = NULL;
 
 	if (!err) {
 		pw->reset_gpio = pdata->reset_gpio;
@@ -902,12 +911,15 @@ static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client,
 	board_priv_pdata->reset_gpio = of_get_named_gpio(node,
 			"reset-gpios", 0);
 
-	of_property_read_string(node, "avdd-reg",
-			&board_priv_pdata->regulators.avdd);
-	of_property_read_string(node, "dvdd-reg",
-			&board_priv_pdata->regulators.dvdd);
-	of_property_read_string(node, "iovdd-reg",
-			&board_priv_pdata->regulators.iovdd);
+	if (of_property_read_string(node, "avdd-reg",
+				    &board_priv_pdata->regulators.avdd))
+		board_priv_pdata->regulators.avdd = NULL;
+	if (of_property_read_string(node, "dvdd-reg",
+				    &board_priv_pdata->regulators.dvdd))
+		board_priv_pdata->regulators.dvdd = NULL;
+	if (of_property_read_string(node, "iovdd-reg",
+				    &board_priv_pdata->regulators.iovdd))
+		board_priv_pdata->regulators.iovdd = NULL;
 
 	return board_priv_pdata;
 
