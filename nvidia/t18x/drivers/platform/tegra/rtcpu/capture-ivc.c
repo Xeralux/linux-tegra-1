@@ -18,6 +18,7 @@
 
 #include <linux/tegra-capture-ivc.h>
 
+#include <linux/sched.h>
 #include <linux/completion.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
