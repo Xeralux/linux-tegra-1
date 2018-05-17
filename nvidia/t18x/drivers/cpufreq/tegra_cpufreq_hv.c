@@ -19,6 +19,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/tegra-cpufreq.h>
 #include <linux/interrupt.h>
+#include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 
