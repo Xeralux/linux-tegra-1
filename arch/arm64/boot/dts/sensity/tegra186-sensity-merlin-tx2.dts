@@ -16,6 +16,7 @@
 #include <t18x-common-platforms/tegra186-quill-common-p3310-1000-a00.dtsi>
 #include "tegra186-sensity-merlin-tx2-power-tree.dtsi"
 #include "tegra186-sensity-merlin-tx2-cameras.dtsi"
+#include <t18x-common-plugin-manager/tegra186-quill-p3310-1000-a00-plugin-manager.dtsi>
 #include <t18x-common-prod/tegra186-priv-quill-p3310-1000-a00-prod.dtsi>
 
 #include <dt-bindings/linux/driver-info.h>
@@ -30,8 +31,18 @@
 
 	chosen {
 		board-has-eeprom;
-		bootargs ="console=ttyS0,115200";
+		bootargs ="console=ttyS0,115200n8";
 		stdout-path = &uarta;
+		plugin-manager {
+			odm-data {
+				l4t;
+			};
+		};
+	};
+
+	plugin-manager {
+		/delete-node/ fragment-comms-a00-chip;
+		/delete-node/ fragment-sdwake-p3310-1000-300;
 	};
 
 	firmware {
