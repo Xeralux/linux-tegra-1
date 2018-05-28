@@ -28,6 +28,16 @@
 			regulator-always-on;
 		};
 
+		en_vdd_sdcard1: regulator@1 {
+			compatible = "regulator-fixed-sync";
+			reg = <1>;
+			regulator-name = "en-vdd-sd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 5) 0>;
+			enable-active-high;
+		};
+
 		vdd_usb0_5v: regulator@4 {
 			compatible = "regulator-fixed-sync";
 			reg = <4>;
@@ -48,6 +58,14 @@
 			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 5) 0>;
 			gpio-open-drain;
 			enable-active-high;
+		};
+
+		vdd_bl_en: regulator@18 {
+			compatible = "regulator-fixed-sync";
+			reg = <18>;
+			regulator-name = "vdd-sys-bl";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 		};
 
 		vdd_1v8_ap: regulator@101 {
@@ -92,6 +110,11 @@
 	sdhci@3420000 {
 		vqmmc-supply = <&spmic_sd2>;
 		vmmc-supply = <&spmic_sd3>;
+	};
+
+	sdhci@3400000 {
+		vqmmc-supply = <&spmic_ldo3>;
+		vmmc-supply = <&en_vdd_sdcard1>;
 	};
 
 	xhci@3530000 {
@@ -246,6 +269,7 @@
 					regulator-disable-ramp-delay = <16000>;
 					maxim,ramp-rate-setting = <5000>;
 					regulator-ramp-delay = <1000>;
+					regulator-always-on;
 				};
 
 				ldo4 {
@@ -287,21 +311,6 @@
 	};
 
 	fixed-regulators {
-		regulator@1 {
-			regulator-enable-ramp-delay = <1120>;
-			regulator-disable-ramp-delay = <16500>;
-		};
-
-		regulator@2 {
-			regulator-enable-ramp-delay = <108>;
-			regulator-disable-ramp-delay = <1200>;
-		};
-
-		regulator@3 {
-			regulator-enable-ramp-delay = <745>;
-			regulator-disable-ramp-delay = <74000>;
-		};
-
 		regulator@4 {
 			regulator-enable-ramp-delay = <945>;
 			regulator-disable-ramp-delay = <2650>;
@@ -312,29 +321,5 @@
 			regulator-disable-ramp-delay = <13000>;
 		};
 
-		regulator@6 {
-			regulator-enable-ramp-delay = <173>;
-			regulator-disable-ramp-delay = <13000>;
-		};
-
-		regulator@7 {
-			regulator-enable-ramp-delay = <245>;
-			regulator-disable-ramp-delay = <43000>;
-		};
-
-		regulator@8 {
-			regulator-enable-ramp-delay = <216>;
-			regulator-disable-ramp-delay = <43000>;
-		};
-
-		regulator@10 {
-			regulator-enable-ramp-delay = <178>;
-			regulator-disable-ramp-delay = <10000>;
-		};
-
-		regulator@11 {
-			regulator-enable-ramp-delay = <5000>;
-			regulator-disable-ramp-delay = <87000>;
-		};
 	};
 };
