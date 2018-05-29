@@ -172,6 +172,8 @@
 		};
 	};
 
+	/delete-node/ pwm-fan;
+
 	bluedroid_pm {
 		avdd-supply = <&battery_reg>;
 		dvdd-supply = <&spmic_sd2>;
@@ -322,4 +324,9 @@
 		};
 
 	};
+
+	/delete-node/ pfsd;
+	/delete-node/ pwm-fan;
+	/delete-node/ tfesd;
+	/delete-node/ thermal-fan-est;
 };
