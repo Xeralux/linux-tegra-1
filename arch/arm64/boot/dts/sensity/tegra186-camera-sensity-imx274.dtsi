@@ -15,6 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "dt-bindings/clock/tegra186-clock.h"
+
+#define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
+#define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)
+#define CAM1_RST_L	TEGRA_MAIN_GPIO(R, 1)
+#define CAM1_PWDN	TEGRA_MAIN_GPIO(N, 2)
+
+
 /* camera control gpio definitions */
 / {
 	host1x {
@@ -92,6 +100,7 @@
 		};
 	};
 
+	/* camera 0 at 2-001a */
 	i2c@3180000 {
 		status = "okay";
 
@@ -99,6 +108,14 @@
 			compatible = "nvidia,imx274";
 
 			reg = <0x1a>;
+
+			clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH1>,
+					 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
+			clock-names = "extperiph1", "pllp_grtba";
+			mclk = "extperiph1";
+			clock-frequency = <24000000>;
+			reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+			pwdn-gpios = <&tegra_main_gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 
 			/* Physical dimensions of sensor */
 			physical_w = "3.674";
@@ -268,6 +285,7 @@
 		};
 	};
 
+	/* camera 1 at 7-001a */
 	i2c@c250000 {
 		status = "okay";
 
@@ -276,12 +294,21 @@
 
 			reg = <0x1a>;
 
+			clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH2>,
+					 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
+			clock-names = "extperiph2", "pllp_grtba";
+			mclk = "extperiph2";
+			clock-frequency = <24000000>;
+			reset-gpios = <&tegra_main_gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;
+			pwdn-gpios = <&tegra_main_gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+
 			/* Physical dimensions of sensor */
 			physical_w = "3.674";
 			physical_h = "2.738";
 			sensor_model = "imx274";
 			/* Define any required hw resources needed by driver */
 			/* ie. clocks, io pins, power sources */
+			devnode = "video1";
 
 			/* Defines number of frames to be dropped by driver internally after applying */
 			/* sensor crop settings. Some sensors send corrupt frames after applying */

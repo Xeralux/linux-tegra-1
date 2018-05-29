@@ -14,11 +14,6 @@
 
 #include "tegra186-camera-sensity-imx274.dtsi"
 
-#define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
-#define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)
-#define CAM1_RST_L	TEGRA_MAIN_GPIO(R, 1)
-#define CAM1_PWDN	TEGRA_MAIN_GPIO(N, 2)
-
 / {
 	tegra-camera-platform {
 		/**
@@ -36,55 +31,15 @@
 		camera-control-output-low {
 			gpio-hog;
 			output-low;
-			gpios = <CAM0_RST_L 0
-				 CAM1_RST_L 0>;
-			label = "cam0-rst",
-				"cam1-rst";
+			gpios = <CAM0_RST_L 0 CAM1_RST_L>;
+			label = "cam0-rst", "cam1-rst";
 		};
-	};
-
-	regulators {
-		cam0_power: regulator@90 {
-			compatible = "regulator-fixed";
-			regulator-name = "cam0-regulator";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = <&tegra_main_gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-			regulator-always-on;
-			regulator-disable-on-shutdown;
-			vin-supply = <&spmic_sd3>;
-			consumers {
-				c1 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "6-0018";
-				};
-				c2 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "6-001a";
-				};
-			};
-		};
-		cam1_power: regulator@91 {
-			compatible = "regulator-fixed";
-			regulator-name = "cam1-regulator";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = <&tegra_main_gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-			regulator-always-on;
-			regulator-disable-on-shutdown;
-			vin-supply = <&spmic_sd3>;
-			consumers {
-				c1 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "2-0018";
-				};
-				c2 {
-					regulator-consumer-supply = "vdd";
-					regulator-consumer-device = "2-001a";
-				};
-			};
+		camera-control-output-high {
+			gpio-hog;
+			output-high;
+			gpios = <CAM0_PWDN 0
+				 CAM1_PWDN 0>;
+			label = "cam0-pwdn", "cam1-pwdn";
 		};
 	};
 
