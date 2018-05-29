@@ -43,6 +43,7 @@
 			/delete-node/ eeprom@1;
 		};
 		/delete-node/ bus@1;
+		/delete-node/ bus@2;
 		/delete-node/ bus@3;
 	};
 
