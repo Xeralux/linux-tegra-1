@@ -16,6 +16,7 @@
  */
 
 #include "dt-bindings/clock/tegra186-clock.h"
+#include "tegra186-sensity-camera-plugin-manager.dtsi"
 
 #define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
 #define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)
@@ -33,18 +34,18 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					liimx274_vi_in0: endpoint {
+					vi_in0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&liimx274_csi_out0>;
+						remote-endpoint = <&csi_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					liimx274_vi_in1: endpoint {
+					vi_in1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
-						remote-endpoint = <&liimx274_csi_out1>;
+						remote-endpoint = <&csi_out1>;
 					};
 				};
 
@@ -62,16 +63,16 @@
 					#size-cells = <0>;
 					port@0 {
 						reg = <0>;
-						liimx274_csi_in1: endpoint@0 {
+						csi_in1: endpoint@0 {
 							csi-port = <2>;
 							bus-width = <4>;
-							remote-endpoint = <&liimx274_imx274_out1>;
+							status = "disabled";
 						};
 					};
 					port@1 {
 						reg = <1>;
-						liimx274_csi_out1: endpoint@1 {
-							remote-endpoint = <&liimx274_vi_in1>;
+						csi_out1: endpoint@1 {
+							remote-endpoint = <&vi_in1>;
 						};
 					};
 				};
@@ -83,16 +84,16 @@
 					#size-cells = <0>;
 					port@0 {
 						reg = <0>;
-						liimx274_csi_in0: endpoint@0 {
+						csi_in0: endpoint@0 {
 							csi-port = <0>;
 							bus-width = <4>;
-							remote-endpoint = <&liimx274_imx274_out0>;
+							status = "disabled";
 						};
 					};
 					port@1 {
 						reg = <1>;
-						liimx274_csi_out0: endpoint@1 {
-							remote-endpoint = <&liimx274_vi_in0>;
+						csi_out0: endpoint@1 {
+							remote-endpoint = <&vi_in0>;
 						};
 					};
 				};
@@ -104,9 +105,9 @@
 	i2c@3180000 {
 		status = "okay";
 
-		imx274_a@1a {
+		imx274_cam0: imx274_a@1a {
 			compatible = "nvidia,imx274";
-
+			status = "disabled";
 			reg = <0x1a>;
 
 			clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH1>,
@@ -275,10 +276,10 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					liimx274_imx274_out0: endpoint {
+					imx274_out0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&liimx274_csi_in0>;
+						remote-endpoint = <&csi_in0>;
 					};
 				};
 			};
@@ -289,9 +290,9 @@
 	i2c@c250000 {
 		status = "okay";
 
-		imx274_c@1a {
+		imx274_cam1: imx274_c@1a {
 			compatible = "nvidia,imx274";
-
+			status = "disabled";
 			reg = <0x1a>;
 
 			clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH2>,
@@ -459,10 +460,10 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					liimx274_imx274_out1: endpoint {
+					imx274_out1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
-						remote-endpoint = <&liimx274_csi_in1>;
+						remote-endpoint = <&csi_in1>;
 					};
 				};
 			};
@@ -527,44 +528,35 @@
 		 * in the module's specsheet from the vender.
 		 */
 		modules {
-			module0 {
-				badge = "imx274_bottomright_A6V24";
+			cam_module0: module0 {
 				position = "bottomright";
 				orientation = "1";
-				status = "okay";
-				drivernode0 {
+				status = "disabled";
+				cam_module0_drivernode0: drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
 					/* Driver's v4l2 device name */
-					devname = "imx274 7-001a";
-					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/i2c@c250000/imx274_c@1a";
-					status = "okay";
+					status = "disabled";
 				};
-				drivernode1 {
+				cam_module0_drivernode1: drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_lens";
-					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
+					status = "disabled";
 				};
 			};
-			module1 {
-				badge = "imx274_bottomleft_A6V24";
+			cam_module1: module1 {
 				position = "bottomleft";
 				orientation = "1";
-				status = "okay";
-				drivernode0 {
+				status = "disabled";
+				cam_module1_drivernode0: drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
-					/* Driver's v4l2 device name */
-					devname = "imx274 2-001a";
-					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/i2c@3180000/imx274_a@1a";
-					status = "okay";
+					status = "disabled";
 				};
-				drivernode1 {
+				cam_module1_drivernode1: drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_lens";
-					proc-device-tree = "/proc/device-tree/lens_imx274@A6V24/";
+					status = "disabled";
 				};
 			};
 		};

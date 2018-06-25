@@ -43,7 +43,12 @@
 			/delete-node/ eeprom@1;
 		};
 		/delete-node/ bus@1;
-		/delete-node/ bus@2;
+		bus@2 {
+			eeprom@0 {
+				label = "cvb";
+				reg-addr-size = <2>;
+			};
+		};
 		/delete-node/ bus@3;
 	};
 
