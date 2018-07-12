@@ -199,6 +199,13 @@
 				};
 			};
 
+			backup-battery {
+				maxim,backup-battery-charging-current = <800>;
+				maxim,backup-battery-charging-voltage = <3500000>;
+				maxim,backup-battery-output-resister = <100>;
+				status = "okay";
+			};
+
 			regulators {
 				sd0 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
