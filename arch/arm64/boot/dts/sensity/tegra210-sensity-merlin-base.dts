@@ -36,6 +36,8 @@
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 #include <t210-common-platforms/tegra210-cpufreq.dtsi>
 #include <t210-common-overrides/tegra210-power-dvfs-override-ucm2c.dtsi>
+#include "jetson-plugin-manager/tegra210-jetson-cv-plugin-manager.dtsi"
+#include "tegra210-sensity-camera-plugin-manager.dtsi"
 
 / {
 	model = "merlin";
@@ -77,6 +79,22 @@
 		memory-region = <&iram>;
 	};
 
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@2 {
+			i2c-bus = <&i2c3>;
+			word-address-1-byte-slave-addresses = <0x50>;
+		};
+	};
+
+	plugin-manager {
+		/delete-node/ fragement@1;
+		/delete-node/ fragement@2;
+		/delete-node/ fragement@3;
+		/delete-node/ fragement@4;
+		/delete-node/ fragement@5;
+	};
+
 	cpufreq {
 		cpu-scaling-data {
 			freq-table = <
@@ -99,6 +117,7 @@
 			>;
 		};
 	};
+
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
 		iopad-defaults {
@@ -812,7 +831,6 @@
 			reg = <0x48>;
 		};
 		ina3221x@40 {
-			status = "okay";
 			channel@0 {
 				ti,current-critical-limit-ma = <3333>;
 			};
