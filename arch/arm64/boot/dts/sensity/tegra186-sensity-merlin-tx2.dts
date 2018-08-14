@@ -183,6 +183,18 @@
 
 	i2c@c240000 {
 		/delete-node/ lp8556-backlight-s-wqxga-10-1@2c;
+
+		adau1361: adau1761.1-003b@3b {
+                        compatible = "ad,adau1361";
+                        reg = <0x3b>;
+			lineout-mode = "headphone"; /* "line" | "headphone" | "headphone-capless" */
+			headphone-mode = "headphone-capless"; /* "line" | "headphone" | "headphone-capless" */
+			digmic-jackdetect-pin-mode = "none"; /* "none" | "digmic" | "jackdetect" */
+			micbias-voltage-pct = <90>; /* <90|65> */
+			input-differential;
+			/* jackdetect-active-low; */
+			/* jackdetect-debounce-time = <5|10|20|40>; */
+                };
 	};
 
 	i2c@c250000 {
@@ -363,6 +375,75 @@
 				};
 			};
 		};
+	};
+
+	hda@3510000 {
+		status = "disabled";
+	};
+
+	tegra_sound: sound {
+		compatible = "nvidia,tegra-audio-t186ref-adau1x61";
+		nvidia,model = "tegra-snd-t186ref-adau1x61";
+		nvidia,num-clk = <8>;
+		nvidia,clk-rates = < 270950400	/* PLLA_x11025_RATE */
+				     11289600	/* AUD_MCLK_x11025_RATE */
+				     45158400	/* PLLA_OUT0_x11025_RATE */
+				     45158400	/* AHUB_x11025_RATE */
+				     245760000  /* PLLA_x8000_RATE */
+				     12288000	/* AUD_MCLK_x8000_RATE */
+				     49152000	/* PLLA_OUT0_x8000_RATE */
+				     49152000 >;/* AHUB_x8000_RATE */
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_PLLA>,
+			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
+				"clk_m", "extern1";
+		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
+		reset-names = "extern1_rst";
+
+		status = "okay";
+		nvidia,num-codec-link = <1>;
+
+		nvidia,audio-routing =
+			"x LINN",	"x Microphone";
+
+		nvidia,xbar = <&tegra_axbar>;
+
+		/delete-node/ nvidia,dai-link-1;
+
+		nvidia,dai-link-1 {
+			link-name = "adau-hifi";
+			cpu-dai = <&tegra_i2s1>;
+			cpu-dai-name = "I2S1";
+			codec-dai = <&adau1361>;
+			codec-dai-name = "adau-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			ignore_suspend;
+			name-prefix = "x";
+		};
+		/delete-node/ nvidia,dai-link-2;
+		/delete-node/ nvidia,dai-link-3;
+		/delete-node/ nvidia,dai-link-4;
+		/delete-node/ nvidia,dai-link-5;
+		/delete-node/ nvidia,dai-link-6;
+		/delete-node/ nvidia,dai-link-7;
+		/delete-node/ nvidia,dai-link-8;
+		/delete-node/ nvidia,dai-link-9;
+		/delete-node/ nvidia,dai-link-10;
+		/delete-node/ nvidia,dai-link-11;
+		/delete-node/ nvidia,dai-link-12;
+		/delete-node/ nvidia,dai-link-13;
 	};
 };
 
