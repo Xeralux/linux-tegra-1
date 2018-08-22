@@ -30,8 +30,8 @@
 	i2c@3180000 {
 		status = "okay";
 
-		imx274_cam0: imx274_a@1a {
-			compatible = "nvidia,imx274";
+		imx185_cam0: imx185_a@1a {
+			compatible = "nvidia,imx185";
 			status = "disabled";
 			reg = <0x1a>;
 
@@ -47,7 +47,7 @@
 			physical_w = "3.674";
 			physical_h = "2.738";
 
-			sensor_model = "imx274";
+			sensor_model = "imx185";
 			/* Define any required hw resources needed by driver */
 			/* ie. clocks, io pins, power sources */
 			devnode = "video0";
@@ -144,64 +144,42 @@
 			* Sensor embedded metadata height in units of rows.
 			* If sensor does not support embedded metadata value should be 0.
 			*/
-			mode0 {
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_a";
-				discontinuous_clk = "yes";
-				dpcm_enable = "false";
-				cil_settletime = "0";
+			mode0 {/*mode IMX185_MODE_1920X1080_CROP_30FPS*/
+					mclk_khz = "37125";
+					num_lanes = "4";
+					tegra_sinterface = "serial_a";
+					discontinuous_clk = "no";
+					dpcm_enable = "false";
+					cil_settletime = "0";
+					dynamic_pixel_bit_depth = "12";
+					csi_pixel_bit_depth = "12";
+					mode_type = "bayer";
+					pixel_phase = "rggb";
 
-				active_w = "1920";
-				active_h = "1080";
-				pixel_t = "bayer_rggb";
-				readout_orientation = "90";
-				line_length = "4200";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "756000000";
+					active_w = "1920";
+					active_h = "1080";
+					readout_orientation = "0";
+					line_length = "2200";
+					inherent_gain = "1";
+					mclk_multiplier = "2";
+					pix_clk_hz = "74250000";
 
-				min_gain_val = "1.0";
-				max_gain_val = "180";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "1.462526";
-				max_framerate = "60";
-				min_exp_time = "16.165";
-				max_exp_time = "165770";
-			};
-			mode1 {
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_a";
-				discontinuous_clk = "yes";
-				dpcm_enable = "false";
-				cil_settletime = "0";
-
-				active_w = "3840";
-				active_h = "2160";
-				pixel_t = "bayer_rggb";
-				readout_orientation = "90";
-				line_length = "4200";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "756000000";
-
-				min_gain_val = "1.0";
-				max_gain_val = "180";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "1.462526";
-				max_framerate = "60";
-				min_exp_time = "16.165";
-				max_exp_time = "165770";
+					min_gain_val = "0"; /* dB */
+					max_gain_val = "48"; /* dB */
+					min_hdr_ratio = "1";
+					max_hdr_ratio = "1";
+					min_framerate = "1.5";
+					max_framerate = "30";
+					min_exp_time = "30";
+					max_exp_time = "660000";
+					embedded_metadata_height = "1";
 			};
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					imx274_out0: endpoint {
+					imx185_out0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
 						remote-endpoint = <&csi_in0>;
@@ -215,8 +193,8 @@
 	i2c@c250000 {
 		status = "okay";
 
-		imx274_cam1: imx274_c@1a {
-			compatible = "nvidia,imx274";
+		imx185_cam1: imx185_c@1a {
+			compatible = "nvidia,imx185";
 			status = "disabled";
 			reg = <0x1a>;
 
@@ -231,7 +209,7 @@
 			/* Physical dimensions of sensor */
 			physical_w = "3.674";
 			physical_h = "2.738";
-			sensor_model = "imx274";
+			sensor_model = "imx185";
 			/* Define any required hw resources needed by driver */
 			/* ie. clocks, io pins, power sources */
 			devnode = "video1";
@@ -326,66 +304,42 @@
 			* Sensor embedded metadata height in units of rows.
 			* If sensor does not support embedded metadata value should be 0.
 			*/
+			mode0 {/*mode IMX185_MODE_1920X1080_CROP_30FPS*/
+					mclk_khz = "37125";
+					num_lanes = "4";
+					tegra_sinterface = "serial_c";
+					discontinuous_clk = "no";
+					dpcm_enable = "false";
+					cil_settletime = "0";
+					dynamic_pixel_bit_depth = "12";
+					csi_pixel_bit_depth = "12";
+					mode_type = "bayer";
+					pixel_phase = "rggb";
 
-			mode0 {
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_c";
-				discontinuous_clk = "yes";
-				dpcm_enable = "false";
-				cil_settletime = "0";
+					active_w = "1920";
+					active_h = "1080";
+					readout_orientation = "0";
+					line_length = "2200";
+					inherent_gain = "1";
+					mclk_multiplier = "2";
+					pix_clk_hz = "74250000";
 
-				active_w = "1920";
-				active_h = "1080";
-				pixel_t = "bayer_rggb";
-				readout_orientation = "90";
-				line_length = "4200";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "756000000";
-
-				min_gain_val = "1.0";
-				max_gain_val = "180";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "1.462526";
-				max_framerate = "60";
-				min_exp_time = "16.165";
-				max_exp_time = "165770";
-			};
-
-			mode1 {
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_c";
-				discontinuous_clk = "yes";
-				dpcm_enable = "false";
-				cil_settletime = "0";
-
-				active_w = "3840";
-				active_h = "2160";
-				pixel_t = "bayer_rggb";
-				readout_orientation = "90";
-				line_length = "4200";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "756000000";
-
-				min_gain_val = "1.0";
-				max_gain_val = "180";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "1.462526";
-				max_framerate = "60";
-				min_exp_time = "16.165";
-				max_exp_time = "165770";
+					min_gain_val = "0"; /* dB */
+					max_gain_val = "48"; /* dB */
+					min_hdr_ratio = "1";
+					max_hdr_ratio = "1";
+					min_framerate = "1.5";
+					max_framerate = "30";
+					min_exp_time = "30";
+					max_exp_time = "660000";
+					embedded_metadata_height = "1";
 			};
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					imx274_out1: endpoint {
+					imx185_out1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
 						remote-endpoint = <&csi_in1>;
@@ -394,7 +348,7 @@
 			};
 		};
 	};
-	lens_imx274@A6V24 {
+	lens_imx185@A6V24 {
 		min_focus_distance = "0.0";
 		hyper_focal = "0.0";
 		focal_length = "5.00";

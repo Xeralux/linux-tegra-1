@@ -12,10 +12,13 @@
  *
  */
 
+#include "tegra186-sensity-camera-plugin-manager.dtsi"
 #include "tegra186-camera-sensity-imx274.dtsi"
+#include "tegra186-camera-sensity-imx185.dtsi"
 
 / {
 	tegra-camera-platform {
+		compatible = "nvidia, tegra-camera-platform";
 		/**
 		* tpg_max_iso = <>;
 		* Max iso bw for 6 streams of tpg
@@ -24,6 +27,86 @@
 		* = 3916.8 MBps
 		*/
 		tpg_max_iso = <3916800>;
+		/**
+		* Physical settings to calculate max ISO BW
+		*
+		* num_csi_lanes = <>;
+		* Total number of CSI lanes when all cameras are active
+		*
+		* max_lane_speed = <>;
+		* Max lane speed in Kbit/s
+		*
+		* min_bits_per_pixel = <>;
+		* Min bits per pixel
+		*
+		* vi_peak_byte_per_pixel = <>;
+		* Max byte per pixel for the VI ISO case
+		*
+		* vi_bw_margin_pct = <>;
+		* Vi bandwidth margin in percentage
+		*
+		* max_pixel_rate = <>;
+		* Max pixel rate in Kpixel/s for the ISP ISO case
+		*
+		* isp_peak_byte_per_pixel = <>;
+		* Max byte per pixel for the ISP ISO case
+		*
+		* isp_bw_margin_pct = <>;
+		* Isp bandwidth margin in percentage
+		*/
+		num_csi_lanes = <8>;
+		max_lane_speed = <1500000>;
+		min_bits_per_pixel = <10>;
+		vi_peak_byte_per_pixel = <2>;
+		vi_bw_margin_pct = <25>;
+		max_pixel_rate = <750000>;
+		isp_peak_byte_per_pixel = <5>;
+		isp_bw_margin_pct = <25>;
+
+		/**
+		 * The general guideline for naming badge_info contains 3 parts, and is as follows,
+		 * The first part is the camera_board_id for the module; if the module is in a FFD
+		 * platform, then use the platform name for this part.
+		 * The second part contains the position of the module, ex. "rear" or "front".
+		 * The third part contains the last 6 characters of a part number which is found
+		 * in the module's specsheet from the vender.
+		 */
+		modules {
+			cam_module0: module0 {
+				position = "bottomright";
+				orientation = "1";
+				status = "disabled";
+				cam_module0_drivernode0: drivernode0 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_sensor";
+					/* Driver's v4l2 device name */
+					status = "disabled";
+				};
+				cam_module0_drivernode1: drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_lens";
+					status = "disabled";
+				};
+			};
+			cam_module1: module1 {
+				position = "bottomleft";
+				orientation = "1";
+				status = "disabled";
+				cam_module1_drivernode0: drivernode0 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_sensor";
+					status = "disabled";
+				};
+				cam_module1_drivernode1: drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_lens";
+					status = "disabled";
+				};
+			};
+		};
+
+
+
 	};
 
 	/* set camera gpio direction to output */
@@ -43,4 +126,81 @@
 		};
 	};
 
+};
+
+/ {
+	host1x {
+		vi@15700000 {
+			num-channels = <2>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					vi_in0: endpoint {
+						csi-port = <0>;
+						bus-width = <4>;
+						remote-endpoint = <&csi_out0>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					vi_in1: endpoint {
+						csi-port = <2>;
+						bus-width = <4>;
+						remote-endpoint = <&csi_out1>;
+					};
+				};
+
+			};
+		};
+
+		nvcsi@150c0000 {
+			num-channels = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			channel@0 {
+				reg = <0>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						csi_in1: endpoint@0 {
+							csi-port = <2>;
+							bus-width = <4>;
+							status = "disabled";
+						};
+					};
+					port@1 {
+						reg = <1>;
+						csi_out1: endpoint@1 {
+							remote-endpoint = <&vi_in1>;
+						};
+					};
+				};
+			};
+			channel@1 {
+				reg = <1>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						csi_in0: endpoint@0 {
+							csi-port = <0>;
+							bus-width = <4>;
+							status = "disabled";
+						};
+					};
+					port@1 {
+						reg = <1>;
+						csi_out0: endpoint@1 {
+							remote-endpoint = <&vi_in0>;
+						};
+					};
+				};
+			};
+		};
+	};
 };

@@ -90,5 +90,79 @@
 				};
 			};
 		};
+
+		fragment-imx185@0 {
+			ids = "VRZN-M185-*";
+			override@0 {
+				target = <&imx185_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&cam_module0>;
+				_overlay_ {
+					status = "okay";
+					badge = "imx185_bottomright_A6V24";
+				};
+			};
+			override@2 {
+				target = <&cam_module0_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					devname = "imx185 7-001a";
+					proc-device-tree = "/proc/device-tree/i2c@c250000/imx185_c@1a";
+				};
+			};
+			override@3 {
+				target = <&cam_module0_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					proc-device-tree = "/proc/device-tree/lens_imx185@A6V24/";
+				};
+			};
+			override@4 {
+				target = <&csi_in0>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&imx185_out0>;
+				};
+			};
+			override@5 {
+				target = <&imx185_cam1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@6 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "okay";
+					badge = "imx185_bottomleft_A6V24";
+				};
+			};
+			override@7 {
+				target = <&cam_module1_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					devname = "imx185 2-001a";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/imx185_a@1a";
+				};
+			};
+			override@8 {
+				target = <&cam_module1_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					proc-device-tree = "/proc/device-tree/lens_imx185@A6V24/";
+				};
+			};
+			override@9 {
+				target = <&csi_in1>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&imx185_out1>;
+				};
+			};
+		};
 	};
 };
