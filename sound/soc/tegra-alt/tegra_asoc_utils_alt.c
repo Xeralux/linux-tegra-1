@@ -353,13 +353,15 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		return -EINVAL;
 
 	/* pll_p_out1 is not used for ahub for T210,T186 */
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
 		data->clk_pll_p_out1 = clk_get_sys(NULL, "pll_p_out1");
-		if (IS_ERR(data->clk_pll_p_out1)) {
-			dev_err(data->dev, "Can't retrieve clk pll_p_out1\n");
-			ret = PTR_ERR(data->clk_pll_p_out1);
-			goto err;
-		}
+	else
+		data->clk_pll_p_out1 = tegra_alt_asoc_utils_get_clk(dev, false,
+								    "pll_p_out1");
+	if (IS_ERR(data->clk_pll_p_out1)) {
+		dev_err(data->dev, "Can't retrieve clk pll_p_out1\n");
+		ret = PTR_ERR(data->clk_pll_p_out1);
+		goto err;
 	}
 
 	data->clk_m = tegra_alt_asoc_utils_get_clk(dev, false, "clk_m");
