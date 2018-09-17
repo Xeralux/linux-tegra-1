@@ -267,12 +267,17 @@ static int imx274_power_on(struct camera_common_data *s_data)
 		goto imx274_avdd_fail;
 
 	usleep_range(1, 2);
-	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 1);
-	if (pw->pwdn_gpio)
+	if (pw->pwdn_gpio) {
 		gpio_set_value(pw->pwdn_gpio, 1);
+		/* datasheet 2.9: reset requires ~2ms settling time */
+		usleep_range(2000, 2010);
+	}
 
-	usleep_range(300, 310);
+	if (pw->reset_gpio) {
+		gpio_set_value(pw->reset_gpio, 1);
+		/* datasheet 2.9: t3 */
+		usleep_range(1350, 1360);
+	}
 
 	pw->state = SWITCH_ON;
 	return 0;
