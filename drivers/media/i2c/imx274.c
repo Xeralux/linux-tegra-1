@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
@@ -68,6 +69,8 @@ struct imx274 {
 	u32				vmax;
 	s32				group_hold_prev;
 	bool				group_hold_en;
+	int				streamcount;
+	int				currentmode;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
@@ -425,14 +428,45 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
 	struct v4l2_control control;
-	int err;
+	int err = 0;
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
+	mutex_lock(&s_data->powerlock);
+
+	if (enable) {
+		if (priv->streamcount != 0) {
+			if (priv->currentmode != s_data->mode) {
+				dev_warn(&client->dev,
+					 "%s: asked to stream mode %d while streaming mode %d\n",
+					 __func__, s_data->mode, priv->currentmode);
+				err = -EINVAL;
+			} else
+				priv->streamcount += 1;
+			mutex_unlock(&s_data->powerlock);
+			return err;
+		}
+	} else {
+		if (priv->streamcount != 1) {
+			if (priv->streamcount <= 0) {
+				dev_warn(&client->dev, "%s: streamcount dropped below 0\n",
+					 __func__);
+				err = -EINVAL;
+				priv->streamcount = 0;
+			} else
+				priv->streamcount -= 1;
+			mutex_unlock(&s_data->powerlock);
+			return err;
+		}
+	}
 
 	imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
 
-	if (!enable)
+	if (!enable) {
+		priv->streamcount = 0;
+		priv->currentmode = -1;
+		mutex_unlock(&s_data->powerlock);
 		return 0;
+	}
 
 	dev_dbg(&client->dev, "%s mode[%d]\n", __func__, s_data->mode);
 
@@ -474,13 +508,20 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 		}
 
 	err = imx274_write_table(priv, mode_table[IMX274_MODE_START_STREAM]);
-	if (err)
-		goto exit;
 
-
-	return 0;
 exit:
-	dev_dbg(&client->dev, "%s: error setting stream\n", __func__);
+	if (err)
+		dev_dbg(&client->dev, "%s: error (%d) setting stream\n", __func__, err);
+	else {
+		/*
+		 * We can set absolute values here, rather than increment/decrement,
+		 * because we already handle the incr/decr cases at the top of the function.
+		 */
+		priv->streamcount = (enable ? 1 : 0);
+		if (enable)
+			priv->currentmode = s_data->mode;
+	}
+	mutex_unlock(&s_data->powerlock);
 	return err;
 }
 
@@ -1016,6 +1057,7 @@ static int imx274_probe(struct i2c_client *client,
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
+	priv->currentmode = -1;
 
 	err = imx274_power_get(priv);
 	if (err)
