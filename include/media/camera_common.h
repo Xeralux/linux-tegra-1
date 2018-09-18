@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/i2c.h>
 #include <linux/kernel.h>
+#include <linux/mutex.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
@@ -186,6 +187,7 @@ struct camera_common_data {
 	int	sensor_mode_id;
 	bool	use_sensor_mode_id;
 	bool	override_enable;
+	struct mutex powerlock;
 	int	powercount;
 };
 

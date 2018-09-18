@@ -763,14 +763,16 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 	int err = 0;
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
 
+	mutex_lock(&s_data->powerlock);
+
 	if (on) {
-		if (s_data->powercount > 0) {
+		if (s_data->powercount != 0) {
 			s_data->powercount += 1;
-			return 0;
+			goto depart;
 		}
 		err = camera_common_mclk_enable(s_data);
 		if (err)
-			return err;
+			goto depart;
 
 		camera_common_dpd_disable(s_data);
 
@@ -781,21 +783,22 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);
 		} else
-			s_data->powercount = 1;
+			s_data->powercount += 1;
 	} else {
-		s_data->powercount -= 1;
-		if (s_data->powercount == 0) {
+		if (s_data->powercount == 1) {
 			call_s_op(s_data, power_off);
 			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);
-		} else if (s_data->powercount < 0) {
+			s_data->powercount = 0;
+		} else if (s_data->powercount <= 0) {
 			dev_warn(s_data->dev,
 				 "%s: powercount dropped below 0\n",
 				 __func__);
-			s_data->powercount = 0;
-		}
+		} else
+			s_data->powercount -= 1;
 	}
-
+depart:
+	mutex_unlock(&s_data->powerlock);
 	return err;
 }
 
@@ -841,6 +844,8 @@ int camera_common_initialize(struct camera_common_data *s_data,
 
 	if (s_data->dev == NULL)
 		return -EINVAL;
+
+	mutex_init(&s_data->powerlock);
 
 	err = camera_common_parse_ports(s_data->dev, s_data);
 	if (err) {
