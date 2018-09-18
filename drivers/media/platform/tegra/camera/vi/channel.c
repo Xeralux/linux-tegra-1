@@ -540,10 +540,9 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 	int err = 0;
 	struct v4l2_subdev *sd;
 
-	if (atomic_read(&chan->is_streaming) == on)
-		return 0;
-
 	if (on) {
+		if (atomic_cmpxchg(&chan->is_streaming, false, true))
+			return 0;
 		/* Enable CSI before sensor. Reason is as follows:
 		 * CSI is able to catch the very first clk transition.
 		 * Ensure mipi calibration is done before transmission/first frame data.
@@ -557,6 +556,8 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 				ret = err;
 		}
 	} else {
+		if (!atomic_cmpxchg(&chan->is_streaming, true, false))
+			return 0;
 		for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 			sd = chan->subdev[num_sd];
 
@@ -566,7 +567,8 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 		}
 	}
 
-	atomic_set(&chan->is_streaming, on);
+	if (ret)
+		atomic_xchg(&chan->is_streaming, !on);
 	return ret;
 }
 
