@@ -314,6 +314,14 @@
 		gpios = <&spmic 7 0>;
 	};
 
+	leds {
+		compatible = "gpio-leds";
+		status-led {
+			gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(B, 5) GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "timer";
+		};
+	};
+
 	bluedroid_pm {
 		status = "disabled";
         };
