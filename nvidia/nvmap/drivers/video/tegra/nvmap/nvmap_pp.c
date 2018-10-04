@@ -36,7 +36,7 @@
 
 #include "nvmap_priv.h"
 
-#define NVMAP_TEST_PAGE_POOL_SHRINKER     0
+#define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
 
 static bool enable_pp = 1;
@@ -530,7 +530,6 @@ static struct shrinker nvmap_page_pool_shrinker = {
 	.seeks = 1,
 };
 
-#if NVMAP_TEST_PAGE_POOL_SHRINKER
 static void shrink_page_pools(int *total_pages, int *available_pages)
 {
 	struct shrink_control sc;
@@ -545,6 +544,7 @@ static void shrink_page_pools(int *total_pages, int *available_pages)
 	*available_pages = nvmap_page_pool_count_objects(NULL, &sc);
 }
 
+#if NVMAP_TEST_PAGE_POOL_SHRINKER
 static int shrink_pp;
 static int shrink_set(const char *arg, const struct kernel_param *kp)
 {
