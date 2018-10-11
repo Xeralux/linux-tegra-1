@@ -387,8 +387,8 @@
 			codec-dai = <&adau1361>;
 			codec-dai-name = "adau-hifi";
 			format = "i2s";
-			bitclock-master;
-			frame-master;
+			bitclock-slave;
+			frame-slave;
 			bitclock-noninversion;
 			frame-noninversion;
 			bit-format = "s16_le";
