@@ -52,12 +52,19 @@
 			/* ie. clocks, io pins, power sources */
 			devnode = "video0";
 
-			/* Defines number of frames to be dropped by driver internally after applying */
-			/* sensor crop settings. Some sensors send corrupt frames after applying */
-			/* crop co-ordinates */
-			post_crop_frame_drop = "0";
-			/* if true, delay gain setting by one frame to be in sync with exposure */
-			/* delayed_gain = "true"; */
+                        /* Defines number of frames to be dropped by driver internally after applying */
+                        /* sensor crop settings. Some sensors send corrupt frames after applying */
+                        /* crop co-ordinates */
+                        post_crop_frame_drop = "0";
+
+                        /* Convert Gain to unit of dB (decibel) befor passing to kernel driver */
+                        use_decibel_gain = "true";
+
+                        /* if true, delay gain setting by one frame to be in sync with exposure */
+                        delayed_gain = "true";
+
+                        /* enable CID_SENSOR_MODE_ID for sensor modes selection */
+                        use_sensor_mode_id = "true";
 
 			/**
 			* A modeX node is required to support v4l2 driver
@@ -155,6 +162,7 @@
 					csi_pixel_bit_depth = "12";
 					mode_type = "bayer";
 					pixel_phase = "rggb";
+					pixel_t = "bayer_rggb";
 
 					active_w = "1920";
 					active_h = "1080";
@@ -185,6 +193,7 @@
 						csi_pixel_bit_depth = "12";
 						mode_type = "bayer";
 						pixel_phase = "rggb";
+						pixel_t = "bayer_rggb";
 
 						active_w = "1920";
 						active_h = "1200";
@@ -244,10 +253,19 @@
 			/* ie. clocks, io pins, power sources */
 			devnode = "video1";
 
-			/* Defines number of frames to be dropped by driver internally after applying */
-			/* sensor crop settings. Some sensors send corrupt frames after applying */
-			/* crop co-ordinates */
-			post_crop_frame_drop = "0";
+                        /* Defines number of frames to be dropped by driver internally after applying */
+                        /* sensor crop settings. Some sensors send corrupt frames after applying */
+                        /* crop co-ordinates */
+                        post_crop_frame_drop = "0";
+
+                        /* Convert Gain to unit of dB (decibel) befor passing to kernel driver */
+                        use_decibel_gain = "true";
+
+                        /* if true, delay gain setting by one frame to be in sync with exposure */
+                        delayed_gain = "true";
+
+                        /* enable CID_SENSOR_MODE_ID for sensor modes selection */
+                        use_sensor_mode_id = "true";
 
 			/**
 			* A modeX node is required to support v4l2 driver
@@ -345,6 +363,7 @@
 					csi_pixel_bit_depth = "12";
 					mode_type = "bayer";
 					pixel_phase = "rggb";
+					pixel_t = "bayer_rggb";
 
 					active_w = "1920";
 					active_h = "1080";
@@ -375,6 +394,7 @@
 						csi_pixel_bit_depth = "12";
 						mode_type = "bayer";
 						pixel_phase = "rggb";
+						pixel_t = "bayer_rggb";
 
 						active_w = "1920";
 						active_h = "1200";
